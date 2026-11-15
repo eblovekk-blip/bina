@@ -6,4 +6,4 @@
 - 기록 이동·백업은 앱의 'JSON으로 내보내기 / 불러오기'를 쓰세요.
 - 홈 화면 추가: iPhone은 Safari 공유 → '홈 화면에 추가', Android는 Chrome 메뉴(⋮) → '홈 화면에 추가'.
 
-GitHub Pages로 배포됩니다: https://eblovekk-blip.github.io/my-budget/
+GitHub Pages로 배포됩니다: https://eblovekk-blip.github.io/bina/
