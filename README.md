@@ -3,8 +3,11 @@
 휴대폰 웹 링크로 바로 열고, 홈 화면에 추가해서 앱처럼 쓰는 가계부입니다.
 
 - **라이브 앱**: <https://eblovekk-blip.github.io/bina/>
-- **디자인**: 블랙 & 네온 라임 다크 테마 (배경 `#0A0A0C`, 카드 `#14151A`, 액센트 `#CCFF00`, 수입 `#00E5A3`, 지출 `#FF4D6D`) — PWA `theme_color`/`background_color`도 `#0A0A0C`
+- **디자인**: 크림 베이지 & 올리브·테라코타 라이트 테마 (배경 `#F7F3EC`, 카드 `#FFFDF9`, 보더 `#E8E0D4`, 액센트 딥 올리브 `#3D5A45`, 지출·강조 테라코타 `#C86D51`, 수입 `#2E7D5B`) — PWA `theme_color`/`background_color`도 `#F7F3EC`
+- **글꼴**: Pretendard 가변 웹폰트(jsDelivr CDN) → 없으면 기기 기본 한글 산세리프로 대체
+- **앱 아이콘**: 크림 타일 위 딥 올리브 아치 + 상승 라인 + 테라코타 코인(새싹) — 512/512 maskable/192/180/32 5종
 - 기록은 기본적으로 이 브라우저(localStorage)에 저장됩니다.
+- 시트 연동 웹 앱은 현재 **보관(사용 중지)** 상태라 앱은 로컬 저장 모드로 동작합니다. 아래 1장은 다시 켤 때를 위한 설정 기록입니다.
 - 구글 시트(Apps Script 웹 앱)를 연결하면 **시트와 실시간 양방향 동기화**됩니다.
 - 기록 이동·백업은 앱의 'JSON으로 내보내기 / 불러오기'를 쓰세요.
 - 홈 화면 추가: iPhone은 Safari 공유 → '홈 화면에 추가', Android는 Chrome 메뉴(⋮) → '홈 화면에 추가'.
@@ -131,7 +134,7 @@ index.html                  앱 본체 (단일 파일, localStorage + 시트 동
 manifest.webmanifest        PWA 설정
 sw.js                       오프라인 캐시
 apps-script/Code.gs         구글 시트 동기화용 Apps Script (시트에 붙여넣고 배포)
-icon-*.png, favicon-32.png, apple-touch-icon.png   앱 아이콘 (블랙 타일 + 라임 바 차트)
+icon-*.png, favicon-32.png, apple-touch-icon.png   앱 아이콘 (크림 타일 + 올리브 아치·테라코타 코인)
 ```
 
 GitHub Pages로 배포됩니다: <https://eblovekk-blip.github.io/bina/>
