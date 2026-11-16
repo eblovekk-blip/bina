@@ -2138,9 +2138,12 @@
         if (!before) cm = '<span class="cmp flat">지난달 없음</span>';
         else {
           var diff = c.value - before;
-          var pct = Math.round(Math.abs(diff) / before * 100);
-          cm = '<span class="cmp ' + (diff > 0 ? 'up' : (diff < 0 ? 'down' : 'flat')) + '">지난달 ' +
-            (diff > 0 ? '+' : (diff < 0 ? '-' : '')) + pct + '%</span>';
+          if (!diff) cm = '<span class="cmp flat">지난달과 같음</span>';
+          else {
+            var pct = Math.round(Math.abs(diff) / before * 100);
+            cm = '<span class="cmp ' + (diff > 0 ? 'up' : 'down') + '">지난달 ' +
+              (diff > 0 ? '+' : '-') + Math.max(1, pct) + '%</span>';
+          }
         }
         return '<button type="button" class="cb-row" data-cat="' + esc(c.name) + '" aria-label="' + esc(c.name) + ' 내역 보기">' +
           '<span class="cb-l"><span class="cb-nm">' + esc(c.name) + '</span>' +
