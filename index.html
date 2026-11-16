@@ -382,6 +382,7 @@
     .wrap{ padding-bottom:80px; }
     .grid{ grid-template-columns:400px 1fr; align-items:start; }
     .grid > .analysis{ position:sticky; top:78px; }
+    .grid > .card:only-child{ grid-column:1 / -1; }
     .card + .card{ margin-top:12px; }
     .sheet{ border-radius:24px; margin:auto; border-bottom:1px solid var(--line-strong); }
     .modal{ align-items:center; }
@@ -1051,7 +1052,7 @@
       var x = left + idx * slot + (slot - bw) / 2;
       var y = base - h;
       var cur = labels[idx].cur;
-      var fill = cur ? '#CCFF00' : '#262A33';
+      var fill = cur ? '#CCFF00' : 'rgba(255,255,255,.14)';
       var label = v > 0 ? '<text x="' + (x + bw / 2).toFixed(1) + '" y="' + (y - 6).toFixed(1) + '" text-anchor="middle" font-size="9" font-weight="700" fill="' + (cur ? '#CCFF00' : '#6B7080') + '">' + shortMoney(v) + '</text>' : '';
       return '<rect x="' + x.toFixed(1) + '" y="' + y.toFixed(1) + '" width="' + bw + '" height="' + h.toFixed(1) + '" rx="7" fill="' + fill + '"><title>' + labels[idx].y + '년 ' + labels[idx].m + '월 ' + won(v) + '</title></rect>' + label;
     }).join('');
