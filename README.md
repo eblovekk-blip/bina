@@ -3,32 +3,50 @@
 휴대폰 웹 링크로 바로 열고, 홈 화면에 추가해서 앱처럼 쓰는 가계부입니다.
 
 - **라이브 앱**: <https://eblovekk-blip.github.io/bina/>
-- **디자인**: 화이트 바탕 + 선명한 핑크 1포인트 심플 테마 (배경 `#FAFAFA`, 카드 `#FFFFFF`, 보더 `#F1F5F9`, 메인 핑크 `#EC4899`, 틴트 `#FDF2F8`/`#FCE7F3`, 수입 에메랄드 `#10B981`, 지출 차콜 `#1F2937`)
-- **화면 구성**: 하단 3탭 — `🏠 홈`(순자산·이번 달·결혼 요약) / `📒 가계부`(달력 뷰 + 분석·전체) / `📈 자산`(순자산·자산 구성·투자 수익률·결혼 예산)
+- **저장소**: `eblovekk-blip/bina` (**Public**), GitHub Pages(`main /`, HTTPS)로 배포
+- **디자인**: 화이트 바탕 + 선명한 핑크 1포인트 심플 테마 (배경 `#FAFAFA`, 카드 `#FFFFFF`, 보더 `#F1F5F9`, 메인 핑크 `#EC4899`, 틴트 `#FDF2F8`/`#FCE7F3`, 수입 에메랄드 `#10B981`)
+- **카테고리 색상 팔레트**: 톤온톤이 아니라 **서로 확실히 구분되는 정돈된 대비 팔레트** — 핑크 `#EC4899` · 인디고 `#4F46E5` · 코랄 `#FB7185` · 틸 `#14B8A6` · 앰버 `#F59E0B` · 라벤더 `#8B5CF6` · 테라코타 `#F97316` · 네이비 `#334155` · 그레이 `#94A3B8` (수입=초록 / 지출=빨강 `#EF4444` 의미 색상만 예외)
+- **화면 구성**: 하단 **4탭** — `🏠 홈` / `📒 가계부` / `📈 자산` / `💍 결혼`
 - **글꼴**: Pretendard 가변 웹폰트(jsDelivr CDN) — 본문 400, 금액·제목 500 위주로 굵기를 줄이고 본문 15.5px로 가독성 확보
 - **앱 아이콘**: 핑크 그라데이션(`#F43F5E`→`#EC4899`) 바탕 + 흰색 미니멀 `₩` 심볼 — 512/maskable 512/192/180/32 5종
+- **금액 숨김(프라이버시)**: 홈·자산·결혼 상단 `👁️ 금액 보기` 토글. 기본은 금액이 `••••••원`으로 가려져 있고, 앱을 새로 열면 다시 숨김 상태로 시작합니다(세션 내 토글).
 - **저장 위치**: 이 브라우저(`localStorage`) + Google 로그인으로 연결한 Google 스프레드시트(양쪽 함께).
 - **연동 방식**: Google 로그인(OAuth 2.0 / Google Identity Services) + Google Sheets API v4 직접 호출.
   무인증 Apps Script 웹 앱(`apps-script/Code.gs`) 방식은 폐기·보관 상태입니다.
+- **번역 팝업 차단**: `<html lang="ko" translate="no">`, `<meta name="google" content="notranslate">`, `<meta http-equiv="Content-Language" content="ko">`, `<body class="notranslate" translate="no">` — 브라우저가 '페이지를 번역하겠습니까?' 팝업을 띄우지 않게 합니다. **이 4가지는 지우지 마세요.**
 - 기록 이동·백업은 앱의 'JSON으로 내보내기 / 불러오기'를 쓰세요.
 - 홈 화면 추가: iPhone은 Safari 공유 → '홈 화면에 추가', Android는 Chrome 메뉴(⋮) → '홈 화면에 추가'.
 
+### 핵심 값 요약 (다른 AI가 바로 쓸 수 있게)
+
+| 항목 | 값 |
+| --- | --- |
+| 라이브 URL | `https://eblovekk-blip.github.io/bina/` |
+| 저장소 | `eblovekk-blip/bina` (Public, Pages는 `main /` 루트) |
+| Google OAuth 2.0 클라이언트 ID | `77594730795-59gjsnevseiubedp1pecppfn6tegeufl.apps.googleusercontent.com` (앱에 기본값 내장, `DEFAULT_GOOGLE_CLIENT_ID`) |
+| Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
+| 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
+| 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v10'` |
+
 ---
 
-## 0. 화면 구성 (2026-11-16 업그레이드)
+## 0. 화면 구성 (2026-11-16 4탭 개편)
 
 | 탭 | 내용 |
 | --- | --- |
-| `홈` | 총 순자산 카드(탭하면 자산 탭), 이번 달 수입·지출·예산 진행 바(탭하면 가계부 탭), 결혼 D-day·예산 집행률·다가오는 미납 항목 |
+| `홈` | 생활비 대시보드 — ① **이번 달 남은 예산**(큰 숫자 + 사용률 바 + `오늘부터 하루 약 XX원씩`), ② **많이 쓴 곳**(이번 달 지출 TOP 3~4 가로 막대), ③ **＋ 지출/수입 기록** 버튼 + **최근 거래 4건**(누르면 수정), 맨 아래 작은 링크 `순자산 ›` · `결혼 D-201 ›` |
 | `가계부` | 상단 토글 `달력` / `분석·전체` |
-|  └ 달력 | 일~토 7열 달력(날짜별 +수입/−지출), 날짜 탭하면 그날 내역이 아래에 표시 |
-|  └ 분석·전체 | 예산 카드(월 전체 + 카테고리별 진행 바), 카테고리 도넛, 고정비·변동비 카드, 최근 6개월 수입·지출 비교 막대, 전체 내역(펼치기/접기 토글, 기본 최근 하루만) |
-| `자산` | 총자산·총부채·순자산비율 배너(+스냅샷 대비 증감), 요약 카드(복사 버튼), 순자산 추이, 자산 구성(자산군 비중 바 + 펼치기), 투자 수익률, 계좌·종목 목록, 결혼 예산 카드 |
+|  └ 달력 | 일~토 7열, 날짜별 `+수입`(초록) / `-지출`(빨강 `#EF4444`), 금액은 모두 콤마 원단위 / 날짜 탭하면 그날 내역이 아래에 표시 |
+|  └ 분석·전체 | 예산 카드(월 전체 + 카테고리별 진행 바), 카테고리 도넛, 고정비·변동비 카드, 최근 6개월 수입·지출 비교 막대, 전체 내역(펼치기/접기) |
+| `자산` | 상단 요약 1개(총자산·총부채·순자산비율 + 스냅샷 대비 증감 + 투자 한 줄 + 스냅샷 저장·요약 복사) + **자산 구성**(분류별 합계 → 누르면 계좌·종목 펼침, ＋ 추가). 중복 카드 없음 |
+| `결혼` | D-day + 총예산·지출·잔여 + 진행 바, 아래 **5분류(웨딩홀·스드메·예물·예단·신혼여행·신혼집·혼수)** 항목별 예산·지출·잔여·납부일·메모·상태 배지, 분류별 ＋ 추가 |
 
 - **저축률**: 가계부 월 요약 오른쪽 배지 — `(수입 − 지출) / 수입 × 100%` (수입 0이면 '수입 입력 시 계산')
 - **고정비·변동비**: 설정(⚙) → 고정비 카테고리 설정에서 고정비로 셀 카테고리를 자유롭게 토글 (localStorage 저장, 기본 `주거/통신`)
 - **카테고리별 예산**: 예산 카드의 `예산 설정` → 월 전체 + 지출 카테고리별 금액 입력
-- **자산 스냅샷**: 자산 탭 `현재 자산 스냅샷 저장` → 그 달 순자산을 기록, 이전 기록 대비 증감과 추이 자동 계산
+- **자산 스냅샷**: 자산 탭 `스냅샷 저장` → 그 달 순자산을 기록, 이전 기록 대비 증감과 추이 자동 계산
+- **자산 중복 집계 방지**: 같은 자산이 다른 id로 두 번 들어오면(과거 동기화·가져오기 사고) 내용이 완전히 같은 사본은 한 번만 집계합니다(`normalizeState`의 서명 검사).
 
 ---
 
@@ -141,7 +159,7 @@
 | 열 | 이름 | 형식 | 예 |
 | --- | --- | --- | --- |
 | A | `id` | 문자열 고유값 | `wd_01` |
-| B | `category` | 스드메 · 예식장 · 신혼집 · 혼수 · 신혼여행 등 | `스드메` |
+| B | `category` | `웨딩홀` · `스드메` · `예물·예단` · `신혼여행` · `신혼집·혼수` (기본 5분류) 또는 직접 입력한 분류 | `스드메` |
 | C | `item` | 항목명 | `스드메 중도금` |
 | D | `budget` | 예산액(원 단위 정수) | `1590000` |
 | E | `spent` | 실지출·결제액(원 단위 정수) | `0` |
@@ -204,11 +222,23 @@
 ## 3. 파일 구성
 
 ```
-index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 3탭)
-manifest.webmanifest        PWA 설정
-sw.js                       오프라인 캐시 (budget-app-v8)
+index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
+manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v10`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
-icon-*.png, favicon-32.png, apple-touch-icon.png   앱 아이콘 (핑크 그라데이션 + 흰색 ₩)
+icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```
 
 GitHub Pages로 배포됩니다: <https://eblovekk-blip.github.io/bina/>
+
+---
+
+## 4. 수정할 때 꼭 지킬 것 (다른 AI·도구 포함)
+
+1. **작업 전 항상 최신 코드부터**: `cd work/budget-pages && git pull origin main` — 여러 AI가 동시에 만질 수 있으므로, pull 없이 편집하면 이전 작업이 덮여 사라집니다. 푸시 전에도 다시 `git pull --rebase`로 충돌을 확인하세요.
+2. **`sw.js`의 `CACHE` 버전 올리기**: `index.html`을 고쳤으면 `var CACHE = 'budget-app-vNN';`의 숫자를 반드시 올립니다(예: v10 → v11). 올리지 않으면 사용자의 폰(웨일·크롬)이 예전 캐시를 계속 보여 줍니다.
+3. **`notranslate` 유지**: `<html translate="no">`, `<meta name="google" content="notranslate">`, `<meta http-equiv="Content-Language" content="ko">`, `<body class="notranslate">`. 지우면 크롬/웨일이 '페이지를 번역하겠습니까?' 팝업을 다시 띄웁니다.
+4. **모바일 가로 넘침 금지**: `html, body { overflow-x: clip }` 유지, flex/grid 자식에 `min-width:0`, 긴 종목명은 `overflow:hidden; text-overflow:ellipsis`, 하단 탭바는 `position:fixed; left:0; right:0` + `.tabbar-inner { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)) }`. 360px에서 `document.documentElement.scrollWidth`가 360을 넘으면 안 됩니다.
+5. **시트 스키마는 머리글 이름 기준**: 열 순서를 바꿔도 앱은 머리글로 찾습니다. 다만 이름(`id`, `date`, `kind` …)은 바꾸지 마세요. `entries`·`budgets` 탭은 기존 사용자 기록이므로 함부로 지우지 않습니다.
+6. **검증 뒤 배포**: `git push origin HEAD:main` → GitHub Actions의 Pages 빌드가 `built`가 되는지 확인(`gh api repos/eblovekk-blip/bina/pages/builds/latest`)한 뒤 라이브에서 확인합니다.
+7. **검증용 테스트 데이터는 실제 시트에 넣지 않기**: 브라우저 `localStorage`에만 넣고, 확인 후 지웁니다.
