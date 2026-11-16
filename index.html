@@ -1770,12 +1770,18 @@
     if (/idpiframe|third_party_cookies|storage/.test(code)) return '브라우저의 쿠키 설정 때문에 로그인할 수 없어요';
     return code || '로그인하지 못했어요';
   }
+  function syncIsCancel(text) { return /닫혀서 취소|권한 승인이 취소|popup_closed|access_denied/.test(String(text || '')); }
+  function syncHandleLoginFailure(err) {
+    var msg = syncOAuthErrorText(err);
+    /* 사용자가 창을 닫았을 뿐이면 '연결 문제'로 남기지 않고 로그인 필요 상태로 둔다 */
+    if (!syncIsCancel(msg)) sync.lastError = msg;
+    renderSyncStatus();
+    showToast('Google 로그인에 실패했어요 · ' + msg);
+  }
   function syncOnToken(resp) {
     sync.busy = false;
     if (!resp || resp.error || !resp.access_token) {
-      sync.lastError = syncOAuthErrorText(resp);
-      renderSyncStatus();
-      showToast('Google 로그인에 실패했어요 · ' + sync.lastError);
+      syncHandleLoginFailure(resp);
       return;
     }
     syncSaveToken(resp);
@@ -1790,9 +1796,7 @@
   }
   function syncOnTokenError(err) {
     sync.busy = false;
-    sync.lastError = syncOAuthErrorText(err);
-    renderSyncStatus();
-    showToast('Google 로그인에 실패했어요 · ' + sync.lastError);
+    syncHandleLoginFailure(err);
   }
   function syncLogoutAsk() {
     askConfirm('Google 연결을 해제할까요?', '이 브라우저의 로그인 정보만 지워요. 구글 시트의 기록은 그대로 남아 있고, 아직 못 올린 변경은 다시 로그인할 때 올라가요.', '로그아웃', true)
