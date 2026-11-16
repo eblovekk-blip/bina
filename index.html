@@ -347,6 +347,7 @@
   .sync-dot{ width:7px; height:7px; border-radius:50%; background:#D6D6D1; flex:0 0 auto; }
   .sync-dot.on{ background:var(--income); box-shadow:0 0 0 3px rgba(46,125,91,.16); }
   .sync-dot.err{ background:var(--expense); box-shadow:0 0 0 3px rgba(200,109,81,.16); }
+  .sync-dot.warn{ background:var(--amber); box-shadow:0 0 0 3px rgba(190,140,60,.16); }
   .sync-dot.busy{ background:var(--accent); animation:syncPulse 1s ease-in-out infinite; }
   @keyframes syncPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
   .sync-badge{
@@ -429,6 +430,8 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <link rel="apple-touch-icon" sizes="180x180" href="./apple-touch-icon.png">
+<!-- Google 계정 연동(OAuth 2.0 / Google Identity Services) -->
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
 <noscript>
@@ -444,7 +447,7 @@
       <div class="logo" aria-hidden="true">₩</div>
       <div>
         나의 가계부
-        <small><span id="todayLabel">오늘</span><span class="sync-badge" id="syncBadge" hidden>⇅ 시트</span></small>
+        <small><span id="todayLabel">오늘</span><button class="sync-badge" id="syncBadge" type="button" title="Google 계정 연동">Google</button></small>
       </div>
     </div>
     <div class="topbar-right">
@@ -586,18 +589,23 @@
     </div>
 
     <div class="set-group">
-      <h3>구글 시트 연동</h3>
-      <label class="field-label" for="syncUrl">Apps Script 웹 앱 URL</label>
+      <h3>Google 계정 연동 (OAuth)</h3>
+      <label class="field-label" for="oauthClientId">Google Client ID</label>
       <div class="sync-row">
-        <input class="input" id="syncUrl" type="url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec">
+        <input class="input" id="oauthClientId" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="1234567890-abc.apps.googleusercontent.com">
+      </div>
+      <label class="field-label" for="sheetId" style="margin-top:12px">스프레드시트 ID</label>
+      <div class="sync-row">
+        <input class="input" id="sheetId" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="스프레드시트 ID">
       </div>
       <div class="sync-btns">
-        <button class="btn primary" id="syncConnectBtn" type="button" style="flex:1">연결 및 동기화</button>
-        <button class="btn" id="syncNowBtn" type="button" style="flex:0 0 auto" hidden>새로고침</button>
-        <button class="btn danger-weak" id="syncDisconnect" type="button" style="flex:0 0 auto" hidden>해제</button>
+        <button class="btn primary" id="googleLoginBtn" type="button" style="flex:1 1 100%">Google로 로그인 및 시트 동기화</button>
+        <button class="btn" id="googleRefreshBtn" type="button" style="flex:1" hidden>새로고침</button>
+        <button class="btn danger-weak" id="googleLogoutBtn" type="button" style="flex:0 0 auto" hidden>로그아웃</button>
       </div>
-      <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatus">연결되지 않음 · 기록은 이 브라우저에만 저장돼요</span></div>
-      <p class="fine">URL을 넣어 두면 앱을 열 때 시트의 기록을 받아오고, 기록을 추가·수정·삭제할 때마다 시트에 바로 반영해요. 인터넷이 끊겨도 앱은 그대로 쓸 수 있고, 다시 연결되면 밀린 변경이 올라가요.</p>
+      <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatus">Google Client ID를 넣고 로그인하면 시트와 연결돼요</span></div>
+      <p class="fine">본인 Google 계정으로 로그인하면, 그 계정이 열 수 있는 스프레드시트만 읽고 써요(권한 범위: 스프레드시트 편집). 로그인 정보는 이 브라우저에만 잠시(약 1시간) 보관되고, 인터넷이 끊기거나 로그인이 풀리면 기록은 브라우저에 쌓아 두었다가 다시 연결될 때 올라가요.</p>
+      <p class="fine">Client ID는 Google Cloud Console → API 및 서비스 → 사용자 인증 정보에서 <b>OAuth 클라이언트 ID(웹 애플리케이션)</b>로 만들고, 승인된 자바스크립트 원본에 <b>https://eblovekk-blip.github.io</b> 를 넣으면 발급돼요. Google Sheets API도 함께 사용 설정해야 해요.</p>
     </div>
 
     <div class="set-group">
@@ -1539,7 +1547,7 @@
       bAdded++;
     });
     saveStorage();
-    if (sync.url && (fresh.length || bAdded)) {
+    if (syncReady() && (fresh.length || bAdded)) {
       syncEnqueue({ action: 'bulkSync', entries: fresh, budgets: freshBudgets });
     }
     render();
@@ -1599,84 +1607,498 @@
   }
 
   /* =========================================================
-     구글 시트 연동 (Apps Script 웹 앱)
-       · 앱을 열면 GET ?action=list 로 시트 내용을 받아 로컬과 병합
-       · 추가·수정·삭제·예산 저장은 POST(text/plain)로 즉시 반영
-       · 실패한 요청은 localStorage 큐에 쌓아 두고 다시 시도
-       · URL이 없거나 오프라인이면 기존처럼 localStorage 만으로 동작
+     Google 계정 연동 (OAuth 2.0 · Google Identity Services)
+       · 구글 클라우드에서 발급한 OAuth 클라이언트 ID(웹)로 로그인
+       · 스코프: https://www.googleapis.com/auth/spreadsheets
+       · 로그인한 계정이 열 수 있는 시트만 읽고 쓴다 (무인증 URL 없음)
+       · 앱을 열면 Google Sheets API v4 로 시트를 읽어 로컬과 병합
+       · 추가·수정·삭제·예산 저장은 시트에 즉시 반영
+       · 실패·오프라인·로그인 만료 시 localStorage 큐에 쌓아 두고 다시 시도
   ========================================================= */
-  var sync = { url: '', busy: false, lastError: '', lastSync: 0, queue: [] };
+  var DEFAULT_GOOGLE_CLIENT_ID = '';   /* 사용자가 발급한 클라이언트 ID를 여기에 넣으면 기본값이 된다 */
+  var DEFAULT_SHEET_ID = '18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og';
+  var OAUTH_CLIENT_KEY = 'household_book_oauth_client_id_v1';
+  var SHEET_ID_KEY = 'household_book_sheet_id_v1';
+  var OAUTH_TOKEN_KEY = 'household_book_oauth_token_v1';
+  var SYNC_QUEUE_KEY = 'household_book_sync_queue_v1';
+  var LEGACY_SYNC_URL_KEY = 'household_book_sync_url_v1';
+  var SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
+  var SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets/';
+  var SHEET_ENTRY_COLS = ['id', 'date', 'type', 'amount', 'category', 'method', 'memo', 'createdAt'];
+
+  var sync = {
+    clientId: '', sheetId: '',
+    token: '', tokenExpiresAt: 0,
+    busy: false, needLogin: false, authToastShown: false,
+    lastError: '', lastSync: 0,
+    queue: [],
+    entryPos: null, budgetPos: null,   /* 시트 머리글에서 읽은 열 위치 */
+    sheetGids: null                    /* 탭 이름 → 숫자 sheetId */
+  };
+  var tokenClient = null;
+  var tokenClientClientId = '';
   var syncFlushTimer = null;
 
   function syncTrim(v) { return String(v == null ? '' : v).trim(); }
+
+  /* ---- 설정 저장/복원 ---- */
   function syncLoadPrefs() {
-    try { sync.url = syncTrim(window.localStorage.getItem(SYNC_URL_KEY)); } catch (e) { sync.url = ''; }
+    try {
+      sync.clientId = syncTrim(window.localStorage.getItem(OAUTH_CLIENT_KEY)) || DEFAULT_GOOGLE_CLIENT_ID;
+    } catch (e) { sync.clientId = DEFAULT_GOOGLE_CLIENT_ID; }
+    try {
+      sync.sheetId = syncTrim(window.localStorage.getItem(SHEET_ID_KEY)) || DEFAULT_SHEET_ID;
+    } catch (e) { sync.sheetId = DEFAULT_SHEET_ID; }
+    try {
+      var raw = window.localStorage.getItem(OAUTH_TOKEN_KEY);
+      var tok = raw ? JSON.parse(raw) : null;
+      if (tok && tok.access_token && Number(tok.expiresAt) > Date.now()) {
+        sync.token = String(tok.access_token);
+        sync.tokenExpiresAt = Number(tok.expiresAt);
+      }
+    } catch (e) {
+      sync.token = '';
+      sync.tokenExpiresAt = 0;
+    }
     try {
       var q = JSON.parse(window.localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
       sync.queue = Array.isArray(q) ? q.filter(function (o) { return o && o.action; }) : [];
     } catch (e) { sync.queue = []; }
+    /* 예전 Apps Script URL 방식의 설정은 더 이상 쓰지 않는다 */
+    try { window.localStorage.removeItem(LEGACY_SYNC_URL_KEY); } catch (e) {}
+    sync.needLogin = !syncHasToken();
   }
-  function syncSaveUrl(url) {
-    sync.url = syncTrim(url);
+  function syncSaveClientId(v) {
+    sync.clientId = syncTrim(v);
+    tokenClient = null;
+    tokenClientClientId = '';
     try {
-      if (sync.url) window.localStorage.setItem(SYNC_URL_KEY, sync.url);
-      else window.localStorage.removeItem(SYNC_URL_KEY);
+      if (sync.clientId) window.localStorage.setItem(OAUTH_CLIENT_KEY, sync.clientId);
+      else window.localStorage.removeItem(OAUTH_CLIENT_KEY);
     } catch (e) {}
+  }
+  function syncSaveSheetId(v) {
+    sync.sheetId = syncTrim(v);
+    sync.sheetGids = null;
+    try {
+      if (sync.sheetId) window.localStorage.setItem(SHEET_ID_KEY, sync.sheetId);
+      else window.localStorage.removeItem(SHEET_ID_KEY);
+    } catch (e) {}
+  }
+  function syncSaveToken(resp) {
+    sync.token = String(resp.access_token || '');
+    var ttl = Number(resp.expires_in) || 3600;
+    sync.tokenExpiresAt = Date.now() + ttl * 1000;
+    try {
+      window.localStorage.setItem(OAUTH_TOKEN_KEY, JSON.stringify({
+        access_token: sync.token, expiresAt: sync.tokenExpiresAt, savedAt: Date.now()
+      }));
+    } catch (e) {}
+  }
+  function syncClearToken() {
+    sync.token = '';
+    sync.tokenExpiresAt = 0;
+    try { window.localStorage.removeItem(OAUTH_TOKEN_KEY); } catch (e) {}
   }
   function syncSaveQueue() {
     try { window.localStorage.setItem(SYNC_QUEUE_KEY, JSON.stringify(sync.queue)); } catch (e) {}
   }
-  function syncLooksValid(url) {
-    return /^https:\/\/\S+$/.test(url) && /\/exec(\?|$)/.test(url);
-  }
-  function syncEndpoint(action) {
-    var base = sync.url;
-    var sep = base.indexOf('?') >= 0 ? '&' : '?';
-    return base + sep + 'action=' + encodeURIComponent(action) + '&_=' + Date.now();
-  }
-  function syncParse(text) {
-    var obj;
-    try { obj = JSON.parse(text); } catch (e) {
-      throw new Error('시트 응답을 읽지 못했어요 (웹 앱 배포 설정 확인)');
+
+  function syncReady() { return !!(sync.clientId && sync.sheetId); }
+  function syncHasToken() { return !!(sync.token && sync.tokenExpiresAt > Date.now() + 20000); }
+  function syncClientIdLooksValid(id) { return /^[0-9A-Za-z\-_.]+\.apps\.googleusercontent\.com$/.test(id); }
+
+  /* ---- 로그인 (Google Identity Services) ---- */
+  function syncInitTokenClient() {
+    if (!sync.clientId) throw new Error('Google Client ID가 없어요');
+    if (!(window.google && google.accounts && google.accounts.oauth2 && google.accounts.oauth2.initTokenClient)) {
+      throw new Error('Google 로그인 스크립트를 아직 불러오지 못했어요 · 잠시 뒤 다시 시도해 주세요');
     }
-    if (!obj || obj.ok !== true) throw new Error((obj && obj.error) ? String(obj.error) : '시트가 요청을 처리하지 못했어요');
-    return obj;
+    if (tokenClient && tokenClientClientId === sync.clientId) return tokenClient;
+    tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: sync.clientId,
+      scope: SHEETS_SCOPE,
+      ux_mode: 'popup',
+      callback: syncOnToken,
+      error_callback: syncOnTokenError
+    });
+    tokenClientClientId = sync.clientId;
+    return tokenClient;
   }
-  function syncGet() {
-    return fetch(syncEndpoint('list'), { method: 'GET', cache: 'no-store', redirect: 'follow' })
-      .then(function (res) {
-        if (!res.ok) throw new Error('시트 응답 오류 (HTTP ' + res.status + ')');
-        return res.text();
-      })
-      .then(function (text) { return syncParse(text); });
-  }
-  function syncSend(action, payload) {
-    var body = { action: action };
-    if (payload) {
-      for (var k in payload) {
-        if (Object.prototype.hasOwnProperty.call(payload, k)) body[k] = payload[k];
+  function syncLogin(opts) {
+    opts = opts || {};
+    if (!sync.clientId) {
+      if (!opts.silent) { showToast('먼저 Google Client ID를 넣어 주세요'); openSettings(); }
+      return false;
+    }
+    if (!syncClientIdLooksValid(sync.clientId)) {
+      if (!opts.silent) {
+        showToast('클라이언트 ID는 …apps.googleusercontent.com 형식이에요');
+        openSettings();
       }
+      return false;
     }
-    return fetch(sync.url, {
-      method: 'POST',
-      /* text/plain 으로 보내 CORS preflight 를 피한다. Apps Script doPost 에서 JSON.parse */
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(body),
-      redirect: 'follow'
-    }).then(function (res) {
-      if (!res.ok) throw new Error('시트 응답 오류 (HTTP ' + res.status + ')');
-      return res.text();
-    }).then(function (text) { return syncParse(text); });
+    if (!sync.sheetId) {
+      if (!opts.silent) { showToast('스프레드시트 ID를 넣어 주세요'); openSettings(); }
+      return false;
+    }
+    var client;
+    try {
+      client = syncInitTokenClient();
+    } catch (err) {
+      if (!opts.silent) showToast(err.message || 'Google 로그인을 시작하지 못했어요');
+      return false;
+    }
+    sync.busy = true;
+    sync.lastError = '';
+    renderSyncStatus();
+    try {
+      client.requestAccessToken({});
+    } catch (err) {
+      sync.busy = false;
+      renderSyncStatus();
+      if (!opts.silent) showToast('Google 로그인 창을 열지 못했어요 · 팝업 차단을 확인해 주세요');
+      return false;
+    }
+    return true;
+  }
+  function syncOAuthErrorText(resp) {
+    var code = String((resp && (resp.error || resp.type || resp.message)) || '');
+    if (code === 'access_denied') return '권한 승인이 취소됐어요';
+    if (/popup_closed|popup_closed_by_user/.test(code)) return '로그인 창이 닫혀서 취소됐어요';
+    if (/invalid_client/.test(code)) return '클라이언트 ID가 올바르지 않아요';
+    if (/idpiframe|third_party_cookies|storage/.test(code)) return '브라우저의 쿠키 설정 때문에 로그인할 수 없어요';
+    return code || '로그인하지 못했어요';
+  }
+  function syncOnToken(resp) {
+    sync.busy = false;
+    if (!resp || resp.error || !resp.access_token) {
+      sync.lastError = syncOAuthErrorText(resp);
+      renderSyncStatus();
+      showToast('Google 로그인에 실패했어요 · ' + sync.lastError);
+      return;
+    }
+    syncSaveToken(resp);
+    sync.needLogin = false;
+    sync.authToastShown = false;
+    sync.lastError = '';
+    renderSyncStatus();
+    showToast('Google 계정에 연결했어요 · 시트와 맞추는 중');
+    syncNow({ silent: true }).then(function (ok) {
+      if (ok) showToast('Google 연결됨 · 기록 ' + fmtNum(state.entries.length) + '건');
+    });
+  }
+  function syncOnTokenError(err) {
+    sync.busy = false;
+    sync.lastError = syncOAuthErrorText(err);
+    renderSyncStatus();
+    showToast('Google 로그인에 실패했어요 · ' + sync.lastError);
+  }
+  function syncLogoutAsk() {
+    askConfirm('Google 연결을 해제할까요?', '이 브라우저의 로그인 정보만 지워요. 구글 시트의 기록은 그대로 남아 있고, 아직 못 올린 변경은 다시 로그인할 때 올라가요.', '로그아웃', true)
+      .then(function (ok) {
+        if (!ok) return;
+        var tok = sync.token;
+        syncClearToken();
+        sync.needLogin = true;
+        sync.lastError = '';
+        sync.lastSync = 0;
+        renderSyncStatus();
+        if (tok && window.google && google.accounts && google.accounts.oauth2 && google.accounts.oauth2.revoke) {
+          try { google.accounts.oauth2.revoke(tok, function () {}); } catch (e) {}
+        }
+        showToast('Google 연결을 해제했어요');
+      });
+  }
+  function syncMarkAuthExpired() {
+    syncClearToken();
+    sync.needLogin = true;
+    sync.lastError = '';
+    if (!sync.authToastShown) {
+      sync.authToastShown = true;
+      showToast('Google 로그인이 만료됐어요 · 다시 로그인하면 밀린 기록이 올라가요');
+    }
+  }
+
+  /* ---- Google Sheets API v4 ---- */
+  function syncApiUrl(path) { return SHEETS_API + encodeURIComponent(sync.sheetId) + path; }
+  function syncRange(r) {
+    return encodeURIComponent(r).replace(/%3A/gi, ':').replace(/%21/gi, '!');
+  }
+  function syncApiFetch(url, opts) {
+    opts = opts || {};
+    var headers = { Authorization: 'Bearer ' + sync.token };
+    if (opts.body) headers['Content-Type'] = 'application/json;charset=utf-8';
+    opts.headers = headers;
+    opts.cache = 'no-store';
+    return fetch(url, opts).then(function (res) {
+      return res.text().then(function (text) {
+        var data = null;
+        if (text) { try { data = JSON.parse(text); } catch (e) {} }
+        if (!res.ok) {
+          var msg = (data && data.error && data.error.message) ? String(data.error.message) : ('HTTP ' + res.status);
+          var err = new Error(msg);
+          err.status = res.status;
+          err.data = data;
+          throw err;
+        }
+        return data;
+      });
+    });
   }
   function syncErrText(err) {
     var m = String((err && err.message) ? err.message : err);
-    if (/Failed to fetch|NetworkError|Load failed|Network error|aborted/i.test(m)) return '시트에 연결하지 못했어요';
+    if (/Failed to fetch|NetworkError|Load failed|Network error|aborted|fetch/i.test(m)) return '시트에 연결하지 못했어요';
+    if (err && err.status === 403) return '이 시트를 읽거나 쓸 권한이 없어요 · 같은 계정으로 시트를 열 수 있는지 확인해 주세요';
+    if (err && err.status === 404) return '스프레드시트를 찾지 못했어요 · 시트 ID를 확인해 주세요';
     return m || '알 수 없는 오류';
+  }
+
+  function syncColumnPos(header, names) {
+    var pos = {};
+    var i, j, found = 0;
+    for (i = 0; i < names.length; i++) pos[names[i]] = i;
+    if (!header || !header.length) return pos;
+    for (i = 0; i < names.length; i++) {
+      for (j = 0; j < header.length; j++) {
+        if (syncTrim(header[j]).toLowerCase() === names[i].toLowerCase()) { pos[names[i]] = j; found++; break; }
+      }
+    }
+    if (!found) { for (i = 0; i < names.length; i++) pos[names[i]] = i; }
+    return pos;
+  }
+  function syncCell(row, idx) {
+    if (!row || typeof idx !== 'number' || idx < 0 || idx >= row.length) return '';
+    var v = row[idx];
+    return v == null ? '' : v;
+  }
+  function syncNum(v) {
+    if (typeof v === 'number') return isFinite(v) ? v : 0;
+    var s = String(v == null ? '' : v).replace(/[^0-9.\-]/g, '');
+    if (!s || s === '-' || s === '.' || s === '-.') return 0;
+    var n = Number(s);
+    return isFinite(n) ? n : 0;
+  }
+  function syncDateText(v) {
+    if (typeof v === 'number' && v > 20000 && v < 90000) {
+      /* 구글 시트 날짜 일련번호 (1899-12-30 기준) */
+      var ms = Date.UTC(1899, 11, 30) + Math.round(v) * 86400000;
+      var dt = new Date(ms);
+      return ymd(new Date(dt.getUTCFullYear(), dt.getUTCMonth(), dt.getUTCDate()));
+    }
+    var s = syncTrim(v);
+    if (!s) return '';
+    var m = s.match(/(\d{4})\D{1,2}(\d{1,2})\D{1,2}(\d{1,2})/);
+    if (m) {
+      var d = parseYmd(m[1] + '-' + pad(Number(m[2])) + '-' + pad(Number(m[3])));
+      if (d) return ymd(d);
+    }
+    return '';
+  }
+  function syncHash(s) {
+    var h = 5381, i = s.length;
+    while (i) h = (h * 33 ^ s.charCodeAt(--i)) >>> 0;
+    return h.toString(36);
+  }
+  function syncParseEntries(header, rows) {
+    var pos = syncColumnPos(header, SHEET_ENTRY_COLS);
+    sync.entryPos = pos;
+    var out = [], seen = {}, dup = {};
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (!row || !row.length) continue;
+      var date = syncDateText(syncCell(row, pos.date));
+      var amount = Math.round(Math.abs(syncNum(syncCell(row, pos.amount))));
+      if (!date || !amount) continue;
+      var id = syncTrim(syncCell(row, pos.id));
+      if (!id) {
+        var key = date + '|' + syncTrim(syncCell(row, pos.type)) + '|' + amount + '|' +
+          syncTrim(syncCell(row, pos.category)) + '|' + syncTrim(syncCell(row, pos.memo));
+        var h = syncHash(key);
+        dup[h] = (dup[h] || 0) + 1;
+        id = 'sr_' + h + (dup[h] > 1 ? '_' + dup[h] : '');
+      }
+      if (seen[id]) continue;
+      seen[id] = 1;
+      var e = normalizeEntry({
+        id: id,
+        date: date,
+        type: syncTrim(syncCell(row, pos.type)),
+        amount: amount,
+        category: syncTrim(syncCell(row, pos.category)),
+        method: syncTrim(syncCell(row, pos.method)),
+        memo: String(syncCell(row, pos.memo)).slice(0, 120),
+        createdAt: Number(syncNum(syncCell(row, pos.createdAt))) || 0
+      });
+      if (e) out.push(e);
+    }
+    return out;
+  }
+  function syncParseBudgets(header, rows) {
+    var pos = syncColumnPos(header, ['month', 'amount']);
+    sync.budgetPos = pos;
+    var out = {};
+    for (var i = 0; i < rows.length; i++) {
+      var row = rows[i];
+      if (!row || !row.length) continue;
+      var raw = syncTrim(syncCell(row, pos.month));
+      var m = raw.match(/(\d{4})\D{1,2}(\d{1,2})/);
+      if (!m) continue;
+      var key = m[1] + '-' + pad(Number(m[2]));
+      if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(key)) continue;
+      var amt = Math.round(syncNum(syncCell(row, pos.amount)));
+      if (amt > 0) out[key] = amt;
+    }
+    return out;
+  }
+
+  function syncEntryRow(e) {
+    var pos = sync.entryPos || syncColumnPos(null, SHEET_ENTRY_COLS);
+    var row = ['', '', '', '', '', '', '', ''];
+    var put = function (k, v) {
+      var i = pos[k];
+      if (typeof i === 'number' && i >= 0 && i < row.length) row[i] = v;
+    };
+    put('id', e.id); put('date', e.date); put('type', e.type); put('amount', e.amount);
+    put('category', e.category); put('method', e.method); put('memo', e.memo); put('createdAt', e.createdAt);
+    return row;
+  }
+  function syncBudgetRow(month, amount) {
+    var pos = sync.budgetPos || { month: 0, amount: 1 };
+    var w = Math.max(pos.month, pos.amount) + 1;
+    var row = [];
+    for (var i = 0; i < w; i++) row.push('');
+    row[pos.month] = month;
+    row[pos.amount] = amount;
+    return row;
+  }
+
+  function syncSheetRead() {
+    var ranges = ['entries!A1:H1', 'entries!A2:H', 'budgets!A1:B1', 'budgets!A2:B'];
+    var q = ranges.map(function (r) { return 'ranges=' + syncRange(r); }).join('&');
+    var url = syncApiUrl('/values:batchGet?' + q +
+      '&majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE&dateTimeRenderOption=FORMATTED_STRING');
+    return syncApiFetch(url, { method: 'GET' }).then(function (data) {
+      var vr = (data && data.valueRanges) || [];
+      var h = [], rows = [], bh = [], brows = [];
+      vr.forEach(function (v, i) {
+        var vals = (v && v.values) || [];
+        if (i === 0) h = vals[0] || [];
+        else if (i === 1) rows = vals;
+        else if (i === 2) bh = vals[0] || [];
+        else if (i === 3) brows = vals;
+      });
+      return {
+        entries: syncParseEntries(h, rows),
+        budgets: syncParseBudgets(bh, brows)
+      };
+    });
+  }
+  function syncColA(tab, key) {
+    var url = syncApiUrl('/values/' + syncRange(tab + '!A2:A') + '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE');
+    return syncApiFetch(url, { method: 'GET' }).then(function (data) {
+      var rows = (data && data.values) || [];
+      for (var i = 0; i < rows.length; i++) {
+        var v = rows[i] && rows[i][0];
+        if (v != null && syncTrim(v) === key) return i + 2;
+      }
+      return 0;
+    });
+  }
+  function syncIdIndex() {
+    var url = syncApiUrl('/values/' + syncRange('entries!A2:A') + '?majorDimension=ROWS&valueRenderOption=UNFORMATTED_VALUE');
+    return syncApiFetch(url, { method: 'GET' }).then(function (data) {
+      var rows = (data && data.values) || [];
+      var idx = {};
+      for (var i = 0; i < rows.length; i++) {
+        var v = rows[i] && rows[i][0];
+        if (v == null) continue;
+        var k = syncTrim(v);
+        if (k) idx[k] = i + 2;
+      }
+      return idx;
+    });
+  }
+  function syncAppendEntries(list) {
+    if (!list.length) return Promise.resolve(null);
+    return syncApiFetch(syncApiUrl('/values/' + syncRange('entries!A:H') +
+      ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS'), {
+      method: 'POST',
+      body: JSON.stringify({ values: list.map(syncEntryRow) })
+    });
+  }
+  function syncUpdateEntryRow(row, e) {
+    return syncApiFetch(syncApiUrl('/values/' + syncRange('entries!A' + row + ':H' + row) +
+      '?valueInputOption=USER_ENTERED'), {
+      method: 'PUT',
+      body: JSON.stringify({ values: [syncEntryRow(e)] })
+    });
+  }
+  function syncUpsertEntries(list) {
+    var items = (list || []).filter(function (e) { return e && e.id; });
+    if (!items.length) return Promise.resolve(0);
+    return syncIdIndex().then(function (idx) {
+      var add = [], chain = Promise.resolve();
+      items.forEach(function (e) {
+        var row = idx[e.id];
+        if (row) chain = chain.then(function () { return syncUpdateEntryRow(row, e); });
+        else add.push(e);
+      });
+      for (var i = 0; i < add.length; i += 200) {
+        (function (chunk) {
+          chain = chain.then(function () { return syncAppendEntries(chunk); });
+        })(add.slice(i, i + 200));
+      }
+      return chain.then(function () { return items.length; });
+    });
+  }
+  function syncSheetGid(title) {
+    if (sync.sheetGids && sync.sheetGids[title] != null) return Promise.resolve(sync.sheetGids[title]);
+    return syncApiFetch(syncApiUrl('?fields=sheets.properties(sheetId,title)'), { method: 'GET' }).then(function (data) {
+      var map = {};
+      ((data && data.sheets) || []).forEach(function (s) {
+        var p = (s && s.properties) || {};
+        if (p.title != null && p.sheetId != null) map[String(p.title)] = p.sheetId;
+      });
+      sync.sheetGids = map;
+      if (map[title] == null) throw new Error('시트에 ' + title + ' 탭이 없어요');
+      return map[title];
+    });
+  }
+  function syncDeleteRow(title, row) {
+    return syncSheetGid(title).then(function (gid) {
+      return syncApiFetch(syncApiUrl(':batchUpdate'), {
+        method: 'POST',
+        body: JSON.stringify({
+          requests: [{ deleteDimension: { range: { sheetId: gid, dimension: 'ROWS', startIndex: row - 1, endIndex: row } } }]
+        })
+      });
+    });
+  }
+  function syncSetBudgetRow(month, amount) {
+    return syncColA('budgets', month).then(function (row) {
+      if (amount > 0) {
+        if (row) {
+          return syncApiFetch(syncApiUrl('/values/' + syncRange('budgets!A' + row + ':B' + row) +
+            '?valueInputOption=USER_ENTERED'), {
+            method: 'PUT',
+            body: JSON.stringify({ values: [syncBudgetRow(month, amount)] })
+          });
+        }
+        return syncApiFetch(syncApiUrl('/values/' + syncRange('budgets!A:B') +
+          ':append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS'), {
+          method: 'POST',
+          body: JSON.stringify({ values: [syncBudgetRow(month, amount)] })
+        });
+      }
+      if (row) return syncDeleteRow('budgets', row);
+      return null;
+    });
   }
 
   /* ---- 변경 큐 ---- */
   function syncEnqueue(op) {
-    if (!sync.url || !op || !op.action) return;
+    if (!syncReady() || !op || !op.action) return;
     var next = [];
     for (var i = 0; i < sync.queue.length; i++) {
       var o = sync.queue[i];
@@ -1692,14 +2114,48 @@
     syncSaveQueue();
     syncFlush();
   }
+  function syncRunOp(op) {
+    if (!op || !op.action) return Promise.resolve(null);
+    if (op.action === 'upsertEntry' && op.entry) {
+      return syncUpsertEntries([op.entry]);
+    }
+    if (op.action === 'deleteEntry' && op.id) {
+      return syncColA('entries', op.id).then(function (row) {
+        if (!row) return null;
+        return syncDeleteRow('entries', row);
+      });
+    }
+    if (op.action === 'setBudget' && op.month) {
+      return syncSetBudgetRow(op.month, Math.round(Number(op.amount) || 0));
+    }
+    if (op.action === 'bulkSync') {
+      var entries = (op.entries || []).filter(function (e) { return e && e.id; });
+      var budgets = op.budgets || {};
+      var chain = syncUpsertEntries(entries).then(function () { return null; });
+      Object.keys(budgets).forEach(function (m) {
+        var v = Math.round(Number(budgets[m]) || 0);
+        chain = chain.then(function () { return syncSetBudgetRow(m, v); });
+      });
+      return chain;
+    }
+    return Promise.resolve(null);
+  }
   function syncFlush() {
-    if (!sync.url || sync.busy || !sync.queue.length) { renderSyncStatus(); return Promise.resolve(); }
-    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) { renderSyncStatus(); return Promise.resolve(); }
+    if (!syncReady() || sync.busy || !sync.queue.length) { renderSyncStatus(); return Promise.resolve(false); }
+    if (!syncHasToken()) {
+      sync.needLogin = true;
+      renderSyncStatus();
+      return Promise.resolve(false);
+    }
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+      renderSyncStatus();
+      return Promise.resolve(false);
+    }
     sync.busy = true;
     renderSyncStatus();
     var op = sync.queue[0] || {};
     var tries = Number(op.tries) || 0;
-    return syncSend(op.action, op).then(function () {
+    return syncRunOp(op).then(function () {
       sync.queue.shift();
       syncSaveQueue();
       sync.busy = false;
@@ -1710,13 +2166,14 @@
       return true;
     }).catch(function (err) {
       sync.busy = false;
-      sync.lastError = syncErrText(err);
+      if (err && err.status === 401) syncMarkAuthExpired();
+      else sync.lastError = syncErrText(err);
       if (sync.queue.length) {
         sync.queue[0].tries = tries + 1;
         syncSaveQueue();
       }
       renderSyncStatus();
-      if (tries + 1 < 4) syncScheduleFlush();
+      if (!(err && (err.status === 401 || err.status === 403)) && tries + 1 < 4) syncScheduleFlush();
       return false;
     });
   }
@@ -1790,27 +2247,41 @@
 
   function syncNow(opts) {
     opts = opts || {};
-    if (!sync.url) {
-      if (!opts.silent) showToast('먼저 구글 시트 연동 URL을 넣어 주세요');
+    if (!syncReady()) {
+      if (!opts.silent) { showToast('설정에서 Google Client ID를 먼저 넣어 주세요'); openSettings(); }
       renderSyncStatus();
       return Promise.resolve(false);
     }
+    if (!syncHasToken()) {
+      sync.needLogin = true;
+      renderSyncStatus();
+      if (!opts.silent) showToast('Google 로그인이 필요해요 · 로그인하면 시트와 맞춰요');
+      return Promise.resolve(false);
+    }
     if (sync.busy) return Promise.resolve(false);
+    if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
+      sync.lastError = '인터넷에 연결되어 있지 않아요';
+      renderSyncStatus();
+      if (!opts.silent) showToast('오프라인이에요 · 연결되면 다시 맞출게요');
+      return Promise.resolve(false);
+    }
     sync.busy = true;
+    sync.lastError = '';
     renderSyncStatus();
-    return syncGet().then(function (remote) {
+    return syncSheetRead().then(function (remote) {
       sync.busy = false;
-      sync.lastError = '';
+      sync.needLogin = false;
       sync.lastSync = Date.now();
       var count = syncApplyRemote(remote);
-      if (!opts.silent) showToast('시트와 맞췄어요 · 기록 ' + fmtNum(count) + '건');
       renderSyncStatus();
+      if (!opts.silent) showToast('시트와 맞췄어요 · 기록 ' + fmtNum(count) + '건');
       return syncFlush().then(function () { return true; });
     }).catch(function (err) {
       sync.busy = false;
-      sync.lastError = syncErrText(err);
+      if (err && err.status === 401) syncMarkAuthExpired();
+      else sync.lastError = syncErrText(err);
       renderSyncStatus();
-      if (!opts.silent) showToast('시트 연결에 실패했어요 · ' + sync.lastError);
+      if (!opts.silent) showToast('시트 연결에 실패했어요 · ' + (sync.lastError || '권한을 확인해 주세요'));
       return false;
     });
   }
@@ -1820,94 +2291,76 @@
     var d = new Date(ts);
     return pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
+  function syncStateName() {
+    if (!syncReady()) return 'setup';
+    if (sync.busy) return 'busy';
+    if (!syncHasToken()) return 'login';
+    if (sync.lastError) return 'error';
+    return 'on';
+  }
   function renderSyncStatus() {
+    var st = syncStateName();
     var badge = $('syncBadge');
     if (badge) {
-      if (!sync.url) {
-        badge.hidden = true;
-      } else {
-        badge.hidden = false;
-        badge.className = 'sync-badge' + (sync.busy ? ' busy' : (sync.lastError ? ' err' : ''));
-        badge.textContent = sync.busy ? '⇅ 동기화 중' : (sync.lastError ? '⇅ 연결 확인' : '⇅ 시트');
-      }
+      badge.hidden = false;
+      badge.className = 'sync-badge' + (st === 'busy' ? ' busy' : (st === 'login' || st === 'error' ? ' err' : ''));
+      badge.textContent = st === 'busy' ? '⇅ 동기화 중'
+        : (st === 'on' ? '⇅ 시트'
+        : (st === 'login' ? 'Google 로그인'
+        : (st === 'setup' ? 'Google' : '⇅ 확인')));
+      badge.title = st === 'login' ? '눌러서 Google 로그인' : (st === 'on' ? '눌러서 시트와 새로 맞추기' : 'Google 계정 연동 설정');
     }
     var dot = $('syncDot');
     var txt = $('syncStatus');
     if (dot && txt) {
       var cls = 'sync-dot';
       var msg;
-      if (!sync.url) {
-        msg = '연결되지 않음 · 기록은 이 브라우저에만 저장돼요';
-      } else if (sync.busy) {
+      if (st === 'setup') {
+        msg = 'Google Client ID를 넣고 로그인하면 시트와 연결돼요 · 지금은 이 브라우저에만 저장돼요';
+      } else if (st === 'busy') {
         cls += ' busy';
         msg = '시트와 동기화하는 중…';
-      } else if (sync.lastError) {
+      } else if (st === 'login') {
+        cls += ' warn';
+        msg = 'Google 로그인이 필요해요 · 로그인하면 기록이 시트에 함께 저장돼요';
+      } else if (st === 'error') {
         cls += ' err';
         msg = '연결 문제 · ' + sync.lastError;
       } else {
         cls += ' on';
-        msg = '연결됨' + (sync.lastSync ? ' · 마지막 ' + syncTimeText(sync.lastSync) : '');
+        msg = 'Google 연결됨' + (sync.lastSync ? ' · 마지막 ' + syncTimeText(sync.lastSync) : '');
       }
       if (sync.queue.length) msg += ' · 대기 ' + sync.queue.length + '건';
       dot.className = cls;
       txt.textContent = msg;
     }
-    var input = $('syncUrl');
-    if (input && document.activeElement !== input) input.value = sync.url;
+    var cid = $('oauthClientId');
+    if (cid && document.activeElement !== cid) cid.value = sync.clientId;
+    var sid = $('sheetId');
+    if (sid && document.activeElement !== sid) sid.value = sync.sheetId;
     var note = $('storageNote');
     if (note && storageOK) {
-      note.textContent = sync.url
-        ? '기록은 이 브라우저와 구글 시트에 함께 저장돼요. 이 브라우저 기록을 지워도 시트에 남아 있어요.'
+      note.textContent = syncHasToken()
+        ? '기록은 이 브라우저와 Google 시트에 함께 저장돼요. 이 브라우저 기록을 지워도 시트에 남아 있어요.'
         : '기록은 이 브라우저(localStorage)에만 저장돼요. 브라우저 기록을 지우거나 다른 기기·다른 브라우저로 옮길 때는 꼭 JSON으로 내보내 두세요.';
     }
-    var nowBtn = $('syncNowBtn');
-    var offBtn = $('syncDisconnect');
-    if (nowBtn) nowBtn.hidden = !sync.url;
-    if (offBtn) offBtn.hidden = !sync.url;
-  }
-
-  /* ---- 연결 / 해제 ---- */
-  function syncConnect() {
-    var input = $('syncUrl');
-    var url = syncTrim(input ? input.value : '');
-    if (!url) { showToast('Apps Script 웹 앱 URL을 붙여넣어 주세요'); return; }
-    if (!syncLooksValid(url)) { showToast('https:// 로 시작해 /exec 로 끝나는 웹 앱 URL을 넣어 주세요'); return; }
-    syncSaveUrl(url);
-    renderSyncStatus();
-    var btn = $('syncConnectBtn');
-    if (btn) { btn.disabled = true; btn.style.opacity = '.6'; }
-    syncNow({ silent: true }).then(function (ok) {
-      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
-      if (ok) showToast('연결했어요 · 기록 ' + fmtNum(state.entries.length) + '건');
-      else showToast('연결하지 못했어요 · ' + (sync.lastError || '배포 설정을 확인해 주세요'));
-      renderSyncStatus();
-    });
-  }
-  function syncDisconnectAsk() {
-    askConfirm('시트 연동을 끌까요?', '이 브라우저의 연동 설정만 지워요. 구글 시트의 기록은 그대로 남아요.', '연동 끄기', true)
-      .then(function (ok) {
-        if (!ok) return;
-        syncSaveUrl('');
-        sync.queue = [];
-        syncSaveQueue();
-        sync.lastError = '';
-        sync.lastSync = 0;
-        renderSyncStatus();
-        showToast('시트 연동을 껐어요');
-      });
+    var nowBtn = $('googleRefreshBtn');
+    if (nowBtn) nowBtn.hidden = !syncReady();
+    var offBtn = $('googleLogoutBtn');
+    if (offBtn) offBtn.hidden = !syncHasToken();
   }
 
   /* ---- 변경 즉시 반영 ---- */
   function syncPushEntry(rec) {
-    if (!sync.url) return;
+    if (!syncReady()) return;
     syncEnqueue({ action: 'upsertEntry', id: rec.id, entry: rec });
   }
   function syncPushDelete(id) {
-    if (!sync.url) return;
+    if (!syncReady()) return;
     syncEnqueue({ action: 'deleteEntry', id: id });
   }
   function syncPushBudget(month, amount) {
-    if (!sync.url) return;
+    if (!syncReady()) return;
     syncEnqueue({ action: 'setBudget', month: month, amount: amount });
   }
 
@@ -1997,20 +2450,50 @@
     });
     $('sBudgetSave').addEventListener('click', saveSettingsBudget);
 
-    // 구글 시트 연동
-    var syncInput = $('syncUrl');
-    if (syncInput) {
-      syncInput.addEventListener('keydown', function (ev) {
-        if (ev.key === 'Enter') { ev.preventDefault(); syncConnect(); }
+    // Google 계정 연동 (OAuth)
+    var cidInput = $('oauthClientId');
+    if (cidInput) {
+      cidInput.addEventListener('change', function () { syncSaveClientId(cidInput.value); renderSyncStatus(); });
+      cidInput.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        syncSaveClientId(cidInput.value);
+        if (syncHasToken()) syncNow({ silent: false }); else syncLogin();
       });
     }
-    if ($('syncConnectBtn')) $('syncConnectBtn').addEventListener('click', syncConnect);
-    if ($('syncNowBtn')) $('syncNowBtn').addEventListener('click', function () { syncNow({ silent: false }); });
-    if ($('syncDisconnect')) $('syncDisconnect').addEventListener('click', syncDisconnectAsk);
-    window.addEventListener('online', function () { if (sync.url) syncFlush(); });
+    var sidInput = $('sheetId');
+    if (sidInput) {
+      sidInput.addEventListener('change', function () { syncSaveSheetId(sidInput.value); renderSyncStatus(); });
+      sidInput.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        syncSaveSheetId(sidInput.value);
+        if (syncHasToken()) syncNow({ silent: false }); else syncLogin();
+      });
+    }
+    if ($('googleLoginBtn')) $('googleLoginBtn').addEventListener('click', function () {
+      if ($('oauthClientId')) syncSaveClientId($('oauthClientId').value);
+      if ($('sheetId')) syncSaveSheetId($('sheetId').value);
+      if (!sync.clientId) { showToast('Google Client ID를 넣어 주세요'); return; }
+      if (syncHasToken()) { syncNow({ silent: false }); return; }
+      syncLogin();
+    });
+    if ($('googleRefreshBtn')) $('googleRefreshBtn').addEventListener('click', function () {
+      if ($('oauthClientId')) syncSaveClientId($('oauthClientId').value);
+      if ($('sheetId')) syncSaveSheetId($('sheetId').value);
+      if (!syncHasToken()) { syncLogin(); return; }
+      syncNow({ silent: false });
+    });
+    if ($('googleLogoutBtn')) $('googleLogoutBtn').addEventListener('click', syncLogoutAsk);
+    if ($('syncBadge')) $('syncBadge').addEventListener('click', function () {
+      if (!syncReady()) { openSettings(); return; }
+      if (!syncHasToken()) { syncLogin(); return; }
+      syncNow({ silent: false });
+    });
+    window.addEventListener('online', function () { if (syncReady()) syncFlush(); });
     window.addEventListener('offline', function () { renderSyncStatus(); });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState !== 'visible' || !sync.url) return;
+      if (document.visibilityState !== 'visible' || !syncHasToken()) return;
       if (Date.now() - (sync.lastSync || 0) < 60000) return;
       syncNow({ silent: true });
     });
@@ -2037,7 +2520,7 @@
       }
     });
     $('resetBtn').addEventListener('click', function () {
-      askConfirm('모든 기록을 삭제할까요?', state.entries.length + '건의 기록과 예산이 모두 사라져요. 되돌릴 수 없으니 필요하면 먼저 JSON으로 내보내 주세요.' + (sync.url ? ' 구글 시트에 연동된 상태라, 다음 동기화 때 시트의 기록이 다시 들어올 수 있어요.' : ''), '모두 삭제', true)
+      askConfirm('모든 기록을 삭제할까요?', state.entries.length + '건의 기록과 예산이 모두 사라져요. 되돌릴 수 없으니 필요하면 먼저 JSON으로 내보내 주세요.' + (syncHasToken() ? ' Google 시트에 연결된 상태라, 다음 동기화 때 시트의 기록이 다시 들어올 수 있어요. 시트에서도 지우려면 시트를 직접 정리해 주세요.' : ''), '모두 삭제', true)
         .then(function (ok) {
           if (!ok) return;
           state.entries = [];
@@ -2073,8 +2556,8 @@
     $('sBudget').value = b ? fmtNum(b) : '';
     renderStats();
     renderSyncStatus();
-    var syncInputNow = $('syncUrl');
-    if (syncInputNow) syncInputNow.value = sync.url;
+    if ($('oauthClientId')) $('oauthClientId').value = sync.clientId;
+    if ($('sheetId')) $('sheetId').value = sync.sheetId;
     openModal('settingsModal');
   }
   function saveSettingsBudget() {
@@ -2123,8 +2606,8 @@
     render();
     syncLoadPrefs();
     renderSyncStatus();
-    if (sync.url) {
-      setTimeout(function () { syncNow({ silent: true }); }, 600);
+    if (syncReady() && syncHasToken()) {
+      setTimeout(function () { syncNow({ silent: true }); }, 700);
     }
   }
 
@@ -2142,7 +2625,9 @@
     fmtNum: fmtNum, won: won, normalizeState: normalizeState, byCategory: byCategory,
     monthExpenseTotal: monthExpenseTotal, totals: totals, parseYmd: parseYmd, groupDigits: groupDigits,
     syncNow: syncNow, syncApplyRemote: syncApplyRemote, syncEnqueue: syncEnqueue, syncFlush: syncFlush,
-    syncLoadPrefs: syncLoadPrefs, syncSaveUrl: syncSaveUrl, renderSyncStatus: renderSyncStatus,
+    syncLoadPrefs: syncLoadPrefs, syncSaveClientId: syncSaveClientId, syncSaveSheetId: syncSaveSheetId,
+    syncLogin: syncLogin, syncLogoutAsk: syncLogoutAsk, syncSheetRead: syncSheetRead, syncHasToken: syncHasToken,
+    renderSyncStatus: renderSyncStatus,
     saveEntry: saveEntry, deleteEntry: deleteEntry, commitBudget: commitBudget, saveSettingsBudget: saveSettingsBudget
   };
 })();
