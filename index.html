@@ -355,7 +355,7 @@
     border-top:1px solid var(--line);
     padding-bottom:env(safe-area-inset-bottom);
   }
-  .tabbar-inner{ width:100%; max-width:1040px; margin:0 auto; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .tabbar-inner{ width:100%; max-width:1040px; margin:0 auto; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); }
   .tabbar button{
     width:100%; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
     padding:9px 0 8px; font-size:11.5px; color:var(--muted); letter-spacing:-.01em; white-space:nowrap;
@@ -395,6 +395,16 @@
   .net-more{ display:inline-block; margin-top:10px; font-size:12.5px; color:rgba(255,255,255,.95); text-decoration:underline; }
   .home-month-val{ font-size:clamp(24px,6.6vw,30px); font-weight:500; letter-spacing:-.03em; margin-top:2px; }
   .home-month-sub{ margin-top:8px; font-size:13px; color:var(--sub); }
+  .home-budget-val{ font-size:clamp(26px,7.2vw,32px); font-weight:500; letter-spacing:-.03em; margin-top:4px; }
+  .home-budget-val.over{ color:#E11D48; }
+  .home-budget-sub{ margin-top:8px; font-size:13px; color:var(--sub); line-height:1.5; }
+  .home-budget-sub b{ font-weight:500; color:var(--ink-2); }
+  .topcat{ display:flex; align-items:center; gap:8px; padding:7px 0; }
+  .topcat .nm{ flex:0 0 64px; font-size:13px; color:var(--ink-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .topcat .track{ flex:1; min-width:0; height:8px; border-radius:999px; background:var(--surface-3); overflow:hidden; }
+  .topcat .track i{ display:block; height:100%; border-radius:999px; }
+  .topcat .amt{ flex:0 0 auto; min-width:52px; text-align:right; font-size:12.5px; color:var(--ink-2); white-space:nowrap; }
+  .topcat .pct{ flex:0 0 30px; text-align:right; font-size:12px; color:var(--muted); }
   .quick-row{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
   .quick-btn{
     height:48px; border-radius:14px; font-size:14.5px; font-weight:500; border:1px solid var(--line);
@@ -415,6 +425,12 @@
   .home-next:empty{ display:none; }
   @keyframes flashCard{ 0%{ box-shadow:0 0 0 3px rgba(236,72,153,.45); } 100%{ box-shadow:var(--shadow-sm); } }
   .flash{ animation:flashCard 1.4s ease; }
+  .home-foot{ display:flex; gap:14px; justify-content:center; margin-top:18px; }
+  .home-foot button{ font-size:12.5px; color:var(--muted); padding:6px 2px; }
+  .home-foot button b{ font-weight:500; color:var(--sub); }
+  .wed-hero{ text-align:center; }
+  .wed-dday{ font-size:clamp(30px,9vw,40px); font-weight:500; letter-spacing:-.04em; color:var(--accent-ink); }
+  .wed-date{ margin-top:4px; font-size:13px; color:var(--sub); }
   .home-row{ display:flex; align-items:center; gap:14px; }
   .home-ico{
     width:46px; height:46px; flex:0 0 46px; border-radius:14px; display:grid; place-items:center;
@@ -610,6 +626,7 @@
 
   /* ---------- floating add button (mobile) ---------- */
   .actionbar{ display:none; }
+  .actionbar.hide{ display:none !important; }
   @media (max-width:600px){
     .actionbar{
       display:block; position:fixed; right:18px; z-index:44;
@@ -697,26 +714,27 @@
 
   <!-- ============ 홈 탭 ============ -->
   <section id="view-home" aria-label="홈">
-    <div class="monthbar"><div class="month-title" id="homeGreet">안녕하세요</div></div>
-
-    <div class="card home-card home-net" id="homeNetCard" role="button" tabindex="0" aria-label="총 순자산 금액 보기 전환">
-      <div class="net-head">
-        <span class="lbl">총 순자산 (예적금 + 투자)</span>
-        <button class="net-eye" id="homeNetEye" type="button">👁️ 금액 보기</button>
-      </div>
-      <div class="val num masked" id="homeNetVal">••••••원</div>
-      <div class="sub num" id="homeNetSub">탭하면 금액이 보여요</div>
-      <button class="net-more" id="homeNetMore" type="button">자산 탭에서 자세히 보기 ›</button>
+    <div class="monthbar">
+      <div class="month-title" id="homeGreet">안녕하세요</div>
+      <button class="eye-pill" id="homeEyeBtn" type="button">👁️ 금액 보기</button>
     </div>
 
-    <div class="card home-card" id="homeMonthCard" role="button" tabindex="0" style="margin-top:12px">
-      <div class="card-head" style="margin-bottom:8px">
-        <h2 id="homeMonthTitle">11월 지출</h2>
-        <span class="hint num" id="homeMonthHint"></span>
+    <div class="card" id="homeBudgetCard" role="button" tabindex="0">
+      <div class="card-head" style="margin-bottom:6px">
+        <h2>이번 달 남은 예산</h2>
+        <span class="hint num" id="homeBudgetHint"></span>
       </div>
-      <div class="home-month-val num" id="homeMonthVal">₩0</div>
-      <div class="bar" style="margin-top:10px"><div class="bar-fill" id="homeMonthBar" style="width:0%"></div></div>
-      <div class="home-month-sub" id="homeMonthSub">예산을 설정하면 남은 금액을 보여 드려요</div>
+      <div class="home-budget-val num" id="homeBudgetLeft">••••••원 남음</div>
+      <div class="bar" style="margin-top:10px"><div class="bar-fill" id="homeBudgetBar" style="width:0%"></div></div>
+      <div class="home-budget-sub" id="homeBudgetSub">예산을 정하면 남은 금액과 하루 쓸 수 있는 돈을 알려 드려요</div>
+    </div>
+
+    <div class="card" style="margin-top:12px">
+      <div class="card-head">
+        <h2>많이 쓴 곳</h2>
+        <button class="text-btn" id="homeTopMore" type="button">전체 보기 ›</button>
+      </div>
+      <div id="homeTopCats"></div>
     </div>
 
     <div class="quick-row">
@@ -732,18 +750,10 @@
       <div id="homeRecent"></div>
     </div>
 
-    <button class="card home-card" id="homeWeddingCard" type="button" style="margin-top:12px">
-      <div class="home-row">
-        <div class="home-ico">💍</div>
-        <div class="home-mid">
-          <div class="t1">결혼 예산</div>
-          <div class="t2" id="homeWeddingSub">예산 대비 집행률</div>
-          <div class="dday-pill num" id="homeDday">D-day</div>
-        </div>
-        <div class="home-val num" id="homeWeddingVal">0%</div>
-      </div>
-      <div class="home-next" id="homeWeddingNext"></div>
-    </button>
+    <div class="home-foot">
+      <button type="button" id="homeFootAsset">순자산 <b class="num" id="homeFootNet">••••</b> ›</button>
+      <button type="button" id="homeFootWedding">결혼 <b class="num" id="homeFootDday">D-day</b> ›</button>
+    </div>
   </section>
 
   <!-- ============ 가계부 탭 ============ -->
@@ -876,25 +886,39 @@
     </div>
 
     <div class="card">
-      <div class="card-head"><h2>자산 구성</h2><span class="hint">누르면 세부 내역</span></div>
-      <div class="comp-bar" id="compBar"></div>
-      <div id="compRows"></div>
-    </div>
-
-    <div class="card">
       <div class="card-head">
-        <h2>계좌 · 종목</h2>
+        <h2>자산 구성</h2>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
           <span class="hint" id="assetCountHint"></span>
           <button class="btn tint" id="assetAddBtn" type="button" style="height:32px;padding:0 12px;font-size:12.5px">＋ 추가</button>
         </div>
       </div>
-      <div id="assetListBody"></div>
+      <div class="comp-bar" id="compBar"></div>
+      <div id="compRows"></div>
+    </div>
+  </section>
+
+  <!-- ============ 결혼 탭 ============ -->
+  <section id="view-wedding" hidden aria-label="결혼">
+    <div class="monthbar">
+      <div class="month-title">결혼</div>
+      <button class="eye-pill" id="wedEyeBtn" type="button">👁️ 금액 보기</button>
+    </div>
+
+    <div class="card wed-hero">
+      <div class="wed-dday num" id="wedDday">D-201</div>
+      <div class="wed-date">2027년 6월 5일 결혼</div>
+      <div class="net-banner" style="margin-top:16px">
+        <div class="nb main"><div class="l">총 예산</div><div class="v num" id="wedBudget">₩0</div></div>
+        <div class="nb"><div class="l">지출</div><div class="v num" id="wedSpent">₩0</div></div>
+        <div class="nb"><div class="l">잔여</div><div class="v num" id="wedLeft">₩0</div></div>
+      </div>
+      <div class="bar" style="margin-top:14px"><div class="bar-fill" id="wedBar" style="width:0%"></div></div>
     </div>
 
     <div class="card" id="weddingCard">
       <div class="card-head">
-        <h2>💍 결혼 예산</h2>
+        <h2>항목</h2>
         <div style="display:flex;align-items:center;gap:8px;margin-left:auto">
           <span class="hint" id="weddingHint"></span>
           <button class="btn tint" id="weddingAddBtn" type="button" style="height:32px;padding:0 12px;font-size:12.5px">＋ 추가</button>
@@ -911,6 +935,7 @@
     <button type="button" data-tab="home" class="on"><span class="ti">🏠</span>홈</button>
     <button type="button" data-tab="book"><span class="ti">📒</span>가계부</button>
     <button type="button" data-tab="asset"><span class="ti">📈</span>자산</button>
+    <button type="button" data-tab="wedding"><span class="ti">💍</span>결혼</button>
   </div>
 </div>
 
@@ -1353,7 +1378,7 @@
       if (raw) {
         var o = JSON.parse(raw);
         if (o && typeof o === 'object') {
-          if (o.tab === 'home' || o.tab === 'book' || o.tab === 'asset') ui.tab = o.tab;
+          if (o.tab === 'home' || o.tab === 'book' || o.tab === 'asset' || o.tab === 'wedding') ui.tab = o.tab;
           if (o.bookView === 'cal' || o.bookView === 'list') ui.bookView = o.bookView;
         }
       }
@@ -1610,11 +1635,14 @@
     $('view-home').hidden = ui.tab !== 'home';
     $('view-book').hidden = ui.tab !== 'book';
     $('view-asset').hidden = ui.tab !== 'asset';
+    $('view-wedding').hidden = ui.tab !== 'wedding';
     var btns = document.querySelectorAll('.tabbar button');
     for (var i = 0; i < btns.length; i++) {
       btns[i].classList.toggle('on', btns[i].getAttribute('data-tab') === ui.tab);
     }
     document.querySelector('.actionbar .fab').textContent = ui.tab === 'asset' ? '＋' : '＋';
+    var ab = document.querySelector('.actionbar');
+    if (ab) ab.classList.toggle('hide', ui.tab === 'home' || ui.tab === 'wedding');
   }
   function renderTop() {
     var d = new Date();
@@ -1632,31 +1660,49 @@
     var t = assetTotals();
     var shown = ui.showMoney;
     var mask = function (v) { return shown ? won(v) : '••••••원'; };
-    var netVal = $('homeNetVal');
-    netVal.textContent = shown ? won(t.net) : '••••••원';
-    netVal.classList.toggle('masked', !shown);
-    $('homeNetSub').textContent = shown
-      ? wonKo(t.net) + (t.debt ? ' · 부채 ' + wonKo(t.debt) : ' · 부채 없음')
-      : '탭하면 금액이 보여요';
-    $('homeNetEye').textContent = shown ? '🙈 금액 숨기기' : '👁️ 금액 보기';
+    $('homeEyeBtn').textContent = shown ? '🙈 금액 숨기기' : '👁️ 금액 보기';
 
     var key = monthKey(nowD.getFullYear(), nowD.getMonth());
     var list = entriesOfMonth(key);
     var mt = totals(list);
     var budget = state.budgets[key] || 0;
     var left = budget - mt.expense;
-    $('homeMonthTitle').textContent = (nowD.getMonth() + 1) + '월 지출';
-    $('homeMonthHint').textContent = budget ? Math.round(mt.expense / budget * 100) + '%' : '';
-    $('homeMonthSub').textContent = !shown
-      ? (budget ? '예산의 ' + Math.round(mt.expense / budget * 100) + '% 사용' : '탭해서 금액 보기')
-      : (budget ? '예산 ' + won(budget) + ' 중 ' + (left >= 0 ? '남은 ' + won(left) : won(-left) + ' 초과')
-                : '예산을 설정하면 남은 금액을 보여 드려요');
     var pct = budget > 0 ? Math.min(100, mt.expense / budget * 100) : 0;
-    var bar = $('homeMonthBar');
+    var daysLeft = Math.max(1, daysInMonth(nowD.getFullYear(), nowD.getMonth()) - nowD.getDate() + 1);
+    var perDay = budget > 0 ? Math.max(0, Math.round(left / daysLeft)) : 0;
+
+    var leftEl = $('homeBudgetLeft');
+    if (!budget) {
+      leftEl.textContent = '예산 미설정';
+      leftEl.classList.remove('over');
+    } else if (left >= 0) {
+      leftEl.textContent = (shown ? won(left) : '••••••원') + ' 남음';
+      leftEl.classList.remove('over');
+    } else {
+      leftEl.textContent = (shown ? won(-left) : '••••••원') + ' 초과';
+      leftEl.classList.add('over');
+    }
+    $('homeBudgetHint').textContent = budget ? Math.round(mt.expense / budget * 100) + '%' : '';
+    var bar = $('homeBudgetBar');
     bar.style.width = pct.toFixed(1) + '%';
-    bar.className = 'bar-fill' + (mt.expense > budget ? ' over' : (budget && pct >= 70 ? ' warn' : ''));
-    $('homeMonthVal').textContent = mask(mt.expense);
-    $('homeMonthVal').style.color = mt.expense > 0 ? 'var(--ink)' : 'var(--muted)';
+    bar.className = 'bar-fill' + (budget && mt.expense > budget ? ' over' : (budget && pct >= 70 ? ' warn' : ''));
+    $('homeBudgetSub').innerHTML = !budget
+      ? '가계부 탭에서 이번 달 예산을 정해 보세요'
+      : !shown
+        ? '예산의 ' + Math.round(mt.expense / budget * 100) + '% 사용'
+        : '월 예산 ' + won(budget) + ' 중 <b>' + won(mt.expense) + '</b> 사용 · ' +
+          (left >= 0 ? '오늘부터 하루 약 <b>' + won(perDay) + '</b>씩' : '예산을 넘었어요');
+
+    // 많이 쓴 곳 TOP 4
+    var tops = byCategory(list).slice(0, 4);
+    $('homeTopCats').innerHTML = tops.length ? tops.map(function (c) {
+      var share = mt.expense > 0 ? (c.value / mt.expense * 100) : 0;
+      return '<div class="topcat">' +
+        '<span class="nm">' + esc(c.name) + '</span>' +
+        '<span class="track"><i style="width:' + Math.max(3, share).toFixed(1) + '%;background:' + c.color + '"></i></span>' +
+        '<span class="amt num">' + (shown ? shortMoney(c.value) : '••••') + '</span>' +
+        '<span class="pct num">' + Math.round(share) + '%</span></div>';
+    }).join('') : '<p class="fine" style="margin:0">이번 달 지출 기록이 아직 없어요.</p>';
 
     // 최근 거래 4건 ( 누르면 바로 수정)
     var recent = state.entries.slice().sort(function (a, b) {
@@ -1677,18 +1723,9 @@
       b.addEventListener('click', function () { openEntry(this.getAttribute('data-eid')); });
     });
 
-    // 결혼 D-day · 예산 요약
-    var w = weddingTotals();
-    $('homeWeddingSub').textContent = shown
-      ? '예산 ' + shortMoney(w.budget) + ' · 집행 ' + shortMoney(w.spent)
-      : '예산 대비 집행률';
-    $('homeWeddingVal').innerHTML = w.budget ? Math.round(w.pct) + '<span style="font-size:12px">%</span>' : '—';
-    $('homeDday').textContent = ddayText() + ' · 2027. 6. 5.';
-    var next = state.wedding.filter(function (x) { return x.status !== '완납'; })
-      .sort(function (a, b) { return (a.dueDate || '9999') < (b.dueDate || '9999') ? -1 : 1; })[0];
-    $('homeWeddingNext').textContent = next
-      ? '다음 납부 · ' + next.item + (next.dueDate ? ' · ' + dateParts(next.dueDate).m + '/' + dateParts(next.dueDate).d : '')
-      : (state.wedding.length ? '미납 항목이 없어요' : '결혼 항목을 ＋ 추가로 정리해 보세요');
+    // 맨 아래 참고 링크
+    $('homeFootNet').textContent = shown ? wonKo(t.net) : '••••';
+    $('homeFootDday').textContent = ddayText();
   }
 
   /* =========================================================
@@ -2327,25 +2364,8 @@
       b.addEventListener('click', function () { openAsset(this.getAttribute('data-aid')); });
     });
 
-    // 계좌·종목 리스트 (투자 종목은 매입·수익률을 함께 표기)
-    var all = state.assets.slice().sort(function (a, b) {
-      return ASSET_KINDS.findIndex(function (k) { return k.v === a.kind; }) - ASSET_KINDS.findIndex(function (k) { return k.v === b.kind; }) || assetValue(b) - assetValue(a);
-    });
-    $('assetCountHint').textContent = all.length ? all.length + '건' : '';
-    $('assetListBody').innerHTML = all.length ? all.map(function (a) {
-      var m = kindMeta(a.kind);
-      return '<button type="button" class="row" data-aid="' + esc(a.id) + '">' +
-        '<span class="ico" style="background:' + hexA(m.color, .10) + '">' + m.emoji + '</span>' +
-        '<span class="mid"><span class="t1">' + esc(a.name) + '</span>' +
-        '<span class="t2">' + m.label + (a.memo ? ' · ' + esc(a.memo) : '') +
-          ((a.kind === 'kr_stock' || a.kind === 'us_stock') && a.principal > 0 ? ' · ' + rateText(a) : '') + '</span></span>' +
-        '<span class="amt num">' + won(a.current) + '</span></button>';
-    }).join('') : '<p class="fine" style="margin:0">하단 ＋ 버튼으로 계좌·종목을 추가해 주세요.</p>';
-    document.querySelectorAll('#assetListBody .row[data-aid]').forEach(function (b) {
-      b.addEventListener('click', function () { openAsset(this.getAttribute('data-aid')); });
-    });
-
-    renderWedding();
+    // 분류별 합계 행이 전체 목록을 대신한다 (중복 카드 제거)
+    $('assetCountHint').textContent = state.assets.length ? state.assets.length + '건' : '';
   }
   function rateText(a) {
     if (!a.principal || a.principal <= 0) return '—';
@@ -2357,16 +2377,25 @@
     if (d >= 0) return '+' + fmtNum(d) + '원';
     return '-' + fmtNum(-d) + '원';
   }
-  function renderWedding() {
+  function renderWeddingTab() {
     var w = weddingTotals();
+    $('wedDday').textContent = ddayText();
+    $('wedEyeBtn').textContent = ui.showMoney ? '🙈 금액 숨기기' : '👁️ 금액 보기';
+    var show = function (v) { return ui.showMoney ? won(v) : '••••••원'; };
+    $('wedBudget').textContent = show(w.budget);
+    $('wedSpent').textContent = show(w.spent);
+    var left = w.budget - w.spent;
+    var leftEl = $('wedLeft');
+    leftEl.textContent = show(left);
+    leftEl.style.color = left < 0 ? '#E11D48' : '';
+    var bar = $('wedBar');
+    bar.style.width = Math.min(100, w.pct).toFixed(1) + '%';
+    bar.className = 'bar-fill' + (w.pct >= 100 ? ' over' : '');
+    renderWedding();
+  }
+  function renderWedding() {
     $('weddingHint').textContent = state.wedding.length ? state.wedding.length + '건' : '';
     var body = $('weddingBody');
-    var head = w.budget ?
-      '<div class="budget-top"><div class="budget-amt num" style="font-size:20px">' + won(w.spent) + '<span class="of">/ ' + won(w.budget) + '</span></div>' +
-      '<div class="budget-pct num">' + Math.round(w.pct) + '%</div></div>' +
-      '<div class="bar"><div class="bar-fill ' + (w.pct >= 100 ? 'over' : '') + '" style="width:' + Math.min(w.pct, 100).toFixed(1) + '%"></div></div>' +
-      '<p class="budget-note">' + ddayText() + ' · 2027년 6월 5일 결혼 · 남은 예산 <b>' + won(Math.max(0, w.budget - w.spent)) + '</b></p>'
-      : '<p class="budget-note" style="margin-top:0">분류별로 항목을 넣으면 예산 대비 집행률을 보여 드려요.</p>';
 
     // 분류별로 묶기 (기본 분류 5개는 비어 있어도 보여 준다)
     var cats = WEDDING_DEFAULT_CATS.slice();
@@ -2400,7 +2429,7 @@
       '</div>';
     }).join('');
 
-    body.innerHTML = head + groups;
+    body.innerHTML = groups;
     body.querySelectorAll('.witem[data-wid]').forEach(function (b) {
       b.addEventListener('click', function () { openWedding(this.getAttribute('data-wid')); });
     });
@@ -2417,6 +2446,7 @@
     renderTop();
     if (ui.tab === 'home') renderHome();
     else if (ui.tab === 'book') renderBook();
+    else if (ui.tab === 'wedding') renderWeddingTab();
     else renderAsset();
     renderStats();
     renderSyncStatus();
@@ -3971,20 +4001,19 @@
     $('confirmYes').addEventListener('click', function () { answerConfirm(true); });
     $('confirmNo').addEventListener('click', function () { answerConfirm(false); });
 
-    // 홈 카드 클릭 (순자산 배너는 금액 보기/숨기기 토글)
+    // 금액 보기/숨기기 토글 (홈·자산·결혼 상단 눈 아이콘 공통)
     function toggleMoney() { ui.showMoney = !ui.showMoney; render(); }
-    $('homeNetCard').addEventListener('click', function (ev) {
-      if (ev.target.closest('#homeNetMore')) return;
-      toggleMoney();
-    });
-    $('homeNetCard').addEventListener('keydown', function (ev) {
-      if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); toggleMoney(); }
-    });
-    $('homeNetEye').addEventListener('click', function (ev) { ev.stopPropagation(); toggleMoney(); });
-    $('homeNetMore').addEventListener('click', function (ev) {
-      ev.stopPropagation(); ui.tab = 'asset'; saveUi(); render();
-    });
+    function goTab(tab, bookView) {
+      ui.tab = tab;
+      if (bookView) ui.bookView = bookView;
+      saveUi(); render();
+      window.scrollTo(0, 0);
+    }
+    $('homeEyeBtn').addEventListener('click', toggleMoney);
     $('assetEyeBtn').addEventListener('click', toggleMoney);
+    $('wedEyeBtn').addEventListener('click', toggleMoney);
+    $('homeFootAsset').addEventListener('click', function () { goTab('asset'); });
+    $('homeFootWedding').addEventListener('click', function () { goTab('wedding'); });
     $('weddingAddBtn').addEventListener('click', function () { openWedding(null, ''); });
     $('assetAddBtn').addEventListener('click', function () { openAsset(null); });
     // 빠른 입력
@@ -3994,24 +4023,9 @@
       var seg = $('typeSeg').children;
       if (seg[1]) seg[1].click();
     });
-    $('homeRecentMore').addEventListener('click', function () {
-      ui.tab = 'book'; ui.bookView = 'list'; saveUi(); render();
-    });
-    // 결혼 카드 → 자산 탭의 결혼 예산 상세로 바로 이동
-    function gotoWedding() {
-      ui.tab = 'asset';
-      saveUi();
-      render();
-      setTimeout(function () {
-        var el = document.getElementById('weddingCard');
-        if (!el) return;
-        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        el.classList.add('flash');
-        setTimeout(function () { el.classList.remove('flash'); }, 1500);
-      }, 90);
-    }
-    $('homeWeddingCard').addEventListener('click', gotoWedding);
-    $('homeMonthCard').addEventListener('click', function () { ui.tab = 'book'; ui.bookView = 'cal'; saveUi(); render(); });
+    $('homeRecentMore').addEventListener('click', function () { goTab('book', 'list'); });
+    $('homeBudgetCard').addEventListener('click', function () { goTab('book', 'list'); });
+    $('homeTopMore').addEventListener('click', function () { ui.tab = 'book'; ui.bookView = 'list'; saveUi(); render(); });
 
     // 자산
     $('snapBtn').addEventListener('click', function () {
@@ -4203,6 +4217,7 @@
   }
   function contextAdd() {
     if (ui.tab === 'asset') openModal('assetAddModal');
+    else if (ui.tab === 'wedding') openWedding(null, '');
     else openEntry(null);
   }
 
