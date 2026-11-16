@@ -8,8 +8,8 @@
   "scope": "./",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
-  "background_color": "#F7F3EC",
-  "theme_color": "#F7F3EC",
+  "background_color": "#FAFAFA",
+  "theme_color": "#FAFAFA",
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {

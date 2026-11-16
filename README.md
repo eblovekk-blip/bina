@@ -3,7 +3,7 @@
 휴대폰 웹 링크로 바로 열고, 홈 화면에 추가해서 앱처럼 쓰는 가계부입니다.
 
 - **라이브 앱**: <https://eblovekk-blip.github.io/bina/>
-- **디자인**: 크림 베이지 & 올리브·테라코타 라이트 테마 (배경 `#F7F3EC`, 카드 `#FFFDF9`, 보더 `#E8E0D4`, 액센트 딥 올리브 `#3D5A45`, 지출·강조 테라코타 `#C86D51`, 수입 `#2E7D5B`) — PWA `theme_color`/`background_color`도 `#F7F3EC`
+- **디자인**: 소프트 화이트 & 올리브·테라코타 라이트 테마 (배경 `#FAFAFA`, 카드·모달 `#FFFFFF`, 입력창·칩 `#F2F2EF`, 보더 `#EAEAEA`, 액센트 딥 올리브 `#3D5A45`, 지출·강조 테라코타 `#C86D51`, 수입 `#2E7D5B`) — PWA `theme_color`/`background_color`도 `#FAFAFA`
 - **글꼴**: Pretendard 가변 웹폰트(jsDelivr CDN) → 없으면 기기 기본 한글 산세리프로 대체
 - **앱 아이콘**: 크림 타일 위 딥 올리브 아치 + 상승 라인 + 테라코타 코인(새싹) — 512/512 maskable/192/180/32 5종
 - 기록은 기본적으로 이 브라우저(localStorage)에 저장됩니다.
