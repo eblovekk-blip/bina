@@ -27,7 +27,7 @@
 | Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
 | 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
 | 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
-| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v12'` |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v13'` |
 
 ---
 
@@ -228,7 +228,7 @@
 ```
 index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
 manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
-sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v12`)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v13`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
 icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```

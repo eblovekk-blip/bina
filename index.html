@@ -577,6 +577,7 @@
   .mini-chips{ display:flex; gap:7px; flex-wrap:wrap; }
   .mini-chips button{ padding:9px 14px; border-radius:11px; background:var(--surface-2); border:1px solid var(--line); font-size:13px; font-weight:400; color:var(--sub); }
   .mini-chips button.on{ background:var(--accent); border-color:var(--accent); color:var(--accent-on); }
+  .tax-hint{ margin-top:8px; font-size:12px; font-weight:400; line-height:1.5; color:var(--muted); letter-spacing:0; }
   .input{
     width:100%; height:46px; border-radius:12px; border:1px solid var(--line); background:var(--surface-2);
     color:var(--ink); padding:0 14px; font-size:15.5px; outline:none;
@@ -1026,6 +1027,7 @@
       <div>
         <span class="field-label">결제수단</span>
         <div class="mini-chips" id="fMethods"></div>
+        <p class="tax-hint" id="taxHint" hidden></p>
       </div>
       <div>
         <label class="field-label" for="fMemo">메모</label>
@@ -2733,6 +2735,23 @@
       btns[i].classList.toggle('exp', t === 'expense');
       btns[i].classList.toggle('inc', t === 'income');
       btns[i].classList.toggle('tr', t === 'transfer');
+    }
+    renderTaxHint();
+  }
+  // 결제수단 아래 작은 절세 안내 — 지출일 때만, 11~12월엔 연말정산 급한 달로 표기
+  function taxHintText() {
+    var m = new Date().getMonth() + 1;
+    if (m >= 11) return '💡 12월까진 체크카드·현금영수증이 연말정산 공제에 유리해요';
+    return '💡 체크카드·현금영수증은 연말정산 공제에 유리해요';
+  }
+  function renderTaxHint() {
+    var el = $('taxHint');
+    if (!el) return;
+    if (form.type === 'expense') {
+      el.textContent = taxHintText();
+      el.hidden = false;
+    } else {
+      el.hidden = true;
     }
   }
   function renderCatChips() {
