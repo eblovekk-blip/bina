@@ -27,7 +27,7 @@
 | Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
 | 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
 | 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
-| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v13'` |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v14'` |
 
 ---
 
@@ -45,6 +45,7 @@
 
 - **용어 구분**: 홈은 **생활비 예산의 잔액**, 가계부는 **월간 수지(수입 − 지출)** — 서로 다른 숫자입니다. **내부이동(계좌이체·카드대금·저축)** 은 `type: transfer`로 저장하고 수입·지출 합계에서 제외합니다.
 - **저축률**: `(수입 − 지출) / 수입 × 100%` (수입 0이면 `— (수입 기록 없음)`)
+- **결제수단**: `카드` / `체크카드` / `현금` / `이체` — 기록 추가·수정 화면의 결제수단 칩과 내역 탭의 결제수단 필터 칩이 같은 목록(`METHODS`)을 씁니다. 기존 기록의 `카드`는 그대로 두어 필터·집계가 깨지지 않고, 필터 칩은 그 달 목록에 실제로 있는 결제수단만 보입니다.
 - **고정비·변동비**: 설정(⚙) → 고정비 카테고리 설정에서 고정비로 셀 카테고리를 자유롭게 토글 (localStorage 저장, 기본 `주거/통신`)
 - **카테고리별 예산**: 분석 탭 예산 카드의 `변경`(빈 상태에선 `예산 설정` 하나만) → 월 전체 + 지출 카테고리별 금액 입력
 - **결혼 지출 합계**: `납부완료` 항목의 결제액만 합산합니다. `예정`·`계약확정` 항목은 `예정` 금액으로 따로 표시합니다.
@@ -133,7 +134,7 @@
 | C | `type` | `expense` \| `income` \| `transfer`(내부이동: 계좌이체·카드대금·저축 — 수입·지출 합계에서 제외) | `expense` |
 | D | `amount` | 원 단위 정수 (양수) | `23500` |
 | E | `category` | 허용 카테고리 (아래) | `식비` |
-| F | `method` | `카드` \| `현금` \| `이체` | `카드` |
+| F | `method` | `카드` \| `체크카드` \| `현금` \| `이체` (기존 기록의 `카드`는 그대로 유효, 모르는 값은 `카드`로 읽음) | `카드` |
 | G | `memo` | 자유 문자열 | `한신우동당산점` |
 | H | `createdAt` | 밀리초 타임스탬프(숫자) | `1794582000000` |
 
@@ -228,7 +229,7 @@
 ```
 index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
 manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
-sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v13`)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v14`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
 icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```

@@ -1318,7 +1318,8 @@
     { name: '현금인출',  emoji: '🏧', color: '#78716C' },
     { name: '기타',      emoji: '📦', color: '#64748B' }
   ];
-  var METHODS = ['카드', '현금', '이체'];
+  /* 결제수단 — 기존 기록·시트 값 호환을 위해 '카드'는 그대로 두고 '체크카드'를 따로 둔다(기본값은 계속 '카드') */
+  var METHODS = ['카드', '체크카드', '현금', '이체'];
   var TYPE_TEXT = { expense: '지출', income: '수입', transfer: '내부이동' };
   var TYPE_SIGN = { expense: '-', income: '+', transfer: '↔' };
   var CAT_COLOR = {};
