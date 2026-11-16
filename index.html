@@ -1036,7 +1036,7 @@
         <button class="btn" id="exportCsv"><span>CSV로 내보내기 (엑셀)</span><span>↓</span></button>
         <button class="btn" id="importBtn"><span>JSON 가져오기</span><span>↑</span></button>
         <button class="btn" id="sampleBtn"><span>예시 데이터 채워 보기</span><span>✨</span></button>
-        <button class="btn danger-weak" id="resetBtn"><span>모든 기록 삭제</span><span>🗑</span></button>
+        <button class="btn danger-weak" id="resetBtn"><span>모든 데이터 삭제 (기록·예산·자산·결혼)</span><span>🗑</span></button>
       </div>
       <input type="file" id="importFile" accept=".json,application/json" hidden>
       <p class="fine" id="storageNote">기록은 이 브라우저(localStorage)에만 저장돼요. 브라우저 기록을 지우거나 다른 기기·다른 브라우저로 옮길 때는 꼭 JSON으로 내보내 두세요.</p>
@@ -3927,15 +3927,19 @@
       }
     });
     $('resetBtn').addEventListener('click', function () {
-      askConfirm('모든 기록을 삭제할까요?', state.entries.length + '건의 기록과 예산이 모두 사라져요. 되돌릴 수 없으니 필요하면 먼저 JSON으로 내보내 주세요.' + (syncHasToken() ? ' Google 시트에 연결된 상태라, 다음 동기화 때 시트의 기록이 다시 들어올 수 있어요. 시트에서도 지우려면 시트를 직접 정리해 주세요.' : ''), '모두 삭제', true)
+      askConfirm('모든 데이터를 삭제할까요?', state.entries.length + '건의 기록과 예산, 자산 ' + state.assets.length + '건, 결혼 항목 ' + state.wedding.length + '건이 모두 사라져요. 되돌릴 수 없으니 필요하면 먼저 JSON으로 내보내 주세요.' + (syncHasToken() ? ' Google 시트에 연결된 상태라, 다음 동기화 때 시트의 데이터가 다시 들어올 수 있어요. 시트에서도 지우려면 시트를 직접 정리해 주세요.' : ''), '모두 삭제', true)
         .then(function (ok) {
           if (!ok) return;
           state.entries = [];
           state.budgets = {};
+          state.assets = [];
+          state.wedding = [];
+          sync.queue = [];
+          syncSaveQueue();
           saveStorage();
           render();
           closeModal('settingsModal');
-          showToast('모든 기록을 삭제했어요');
+          showToast('모든 데이터를 삭제했어요');
         });
     });
 
@@ -4054,6 +4058,7 @@
     assetTotals: assetTotals, weddingTotals: weddingTotals, snapshots: snapshots,
     syncNow: syncNow, syncApplyRemote: syncApplyRemote, syncEnqueue: syncEnqueue, syncFlush: syncFlush,
     syncLoadPrefs: syncLoadPrefs, syncSaveClientId: syncSaveClientId, syncSaveSheetId: syncSaveSheetId,
+    syncSaveQueue: syncSaveQueue,
     syncLogin: syncLogin, syncLogoutAsk: syncLogoutAsk, syncSheetRead: syncSheetRead, syncHasToken: syncHasToken,
     renderSyncStatus: renderSyncStatus, render: render,
     saveEntry: saveEntry, deleteEntry: deleteEntry, openBudgetModal: openBudgetModal, saveBudgetModal: saveBudgetModal,
