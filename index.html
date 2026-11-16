@@ -286,7 +286,7 @@
     padding:0; background:none; text-align:right; color:var(--ink);
     font-variant-numeric:tabular-nums;
   }
-  .amount-field input::placeholder{ color:var(--surface-3); }
+  .amount-field input::placeholder{ color:rgba(255,255,255,.16); }
   .fields{ display:flex; flex-direction:column; gap:15px; margin-top:18px; }
   .field-label{ display:block; font-size:12px; font-weight:800; color:var(--sub); margin-bottom:8px; }
   .cat-chips{ display:grid; grid-template-columns:repeat(4,1fr); gap:7px; }
@@ -578,7 +578,7 @@
       </div>
       <div class="sync-btns">
         <button class="btn primary" id="syncConnectBtn" type="button" style="flex:1">연결 및 동기화</button>
-        <button class="btn blue-weak" id="syncNowBtn" type="button" style="flex:0 0 auto" hidden>새로고침</button>
+        <button class="btn" id="syncNowBtn" type="button" style="flex:0 0 auto" hidden>새로고침</button>
         <button class="btn danger-weak" id="syncDisconnect" type="button" style="flex:0 0 auto" hidden>해제</button>
       </div>
       <div class="sync-status"><span class="sync-dot" id="syncDot"></span><span id="syncStatus">연결되지 않음 · 기록은 이 브라우저에만 저장돼요</span></div>
@@ -1839,6 +1839,12 @@
     }
     var input = $('syncUrl');
     if (input && document.activeElement !== input) input.value = sync.url;
+    var note = $('storageNote');
+    if (note && storageOK) {
+      note.textContent = sync.url
+        ? '기록은 이 브라우저와 구글 시트에 함께 저장돼요. 이 브라우저 기록을 지워도 시트에 남아 있어요.'
+        : '기록은 이 브라우저(localStorage)에만 저장돼요. 브라우저 기록을 지우거나 다른 기기·다른 브라우저로 옮길 때는 꼭 JSON으로 내보내 두세요.';
+    }
     var nowBtn = $('syncNowBtn');
     var offBtn = $('syncDisconnect');
     if (nowBtn) nowBtn.hidden = !sync.url;
