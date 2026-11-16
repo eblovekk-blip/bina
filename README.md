@@ -41,10 +41,14 @@
 
 ### 1-3. 앱에서 연결
 
-1. 가계부 앱 → **설정(⚙) → Google 계정 연동 (OAuth)**
-2. **Google Client ID** 칸에 복사한 클라이언트 ID를 붙여넣습니다. (스프레드시트 ID는 기본값 그대로)
-3. **[Google로 로그인 및 시트 동기화]** → Google 로그인·권한 승인(스프레드시트 편집) → 자동으로 시트와 맞춰집니다.
-4. 이후에는 앱 상단 배지를 누르면 언제든 다시 맞출 수 있습니다.
+발급받은 클라이언트 ID(`77594730795-59gjsnevseiubedp1pecppfn6tegeufl.apps.googleusercontent.com`)는 앱에 **기본값으로 들어 있어서** 설정에서 따로 넣지 않아도 됩니다. (`DEFAULT_GOOGLE_CLIENT_ID` 상수)
+
+1. 가계부 앱 → **설정(⚙) → Google 계정 연동 (OAuth)** — Client ID와 스프레드시트 ID가 채워져 있는지 확인합니다.
+2. **[Google로 로그인 및 시트 동기화]** → `eblovekk@gmail.com` 선택 → 권한 승인(스프레드시트 편집) → 자동으로 시트와 맞춰집니다.
+3. 이후에는 앱 상단 배지를 누르면 언제든 다시 맞출 수 있습니다.
+
+- 다른 클라이언트 ID를 쓰려면 설정의 **Google Client ID** 칸에 바꿔 넣으면 그 값이 이 브라우저에서 우선합니다.
+- 같은 클라이언트 ID의 **승인된 자바스크립트 원본**에는 `https://eblovekk-blip.github.io`, **테스트 사용자**에는 `eblovekk@gmail.com`이 들어 있어야 합니다.
 
 | 상단 배지 | 뜻 |
 | --- | --- |
