@@ -9,7 +9,7 @@
 - **화면 구성**: 하단 **4탭** — `🏠 홈` / `📒 가계부` / `📈 자산` / `💍 결혼`
 - **글꼴**: Pretendard 가변 웹폰트(jsDelivr CDN) — 본문 400, 금액·제목 500 위주로 굵기를 줄이고 본문 15.5px로 가독성 확보
 - **앱 아이콘**: 핑크 그라데이션(`#F43F5E`→`#EC4899`) 바탕 + 흰색 미니멀 `₩` 심볼 — 512/maskable 512/192/180/32 5종
-- **금액 숨김(프라이버시)**: 홈·자산·결혼 상단 `👁️ 금액 보기` 토글. 기본은 금액이 `••••••원`으로 가려져 있고, 앱을 새로 열면 다시 숨김 상태로 시작합니다(세션 내 토글).
+- **금액 숨김(프라이버시)**: **별도 버튼 없이 숫자 자체를 탭하면 토글**됩니다. 기본 숨김은 **자산 탭 `총자산`·`총부채` 숫자**와 **홈 하단 `순자산` 숫자**뿐이고(표시 `••••••원`), 홈의 남은 예산·많이 쓴 곳·최근 거래와 결혼 탭 예산/지출은 항상 그대로 보입니다. 앱을 새로 열면 다시 숨김 상태로 시작합니다(세션 내 토글).
 - **저장 위치**: 이 브라우저(`localStorage`) + Google 로그인으로 연결한 Google 스프레드시트(양쪽 함께).
 - **연동 방식**: Google 로그인(OAuth 2.0 / Google Identity Services) + Google Sheets API v4 직접 호출.
   무인증 Apps Script 웹 앱(`apps-script/Code.gs`) 방식은 폐기·보관 상태입니다.
@@ -27,7 +27,7 @@
 | Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
 | 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
 | 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
-| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v10'` |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v11'` |
 
 ---
 
@@ -224,7 +224,7 @@
 ```
 index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
 manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
-sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v10`)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v11`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
 icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```

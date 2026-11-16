@@ -1,7 +1,7 @@
 /* 나의 가계부 - service worker
    목적: ① 홈 화면에 앱처럼 설치 ② 전파가 약하거나 오프라인일 때도 앱이 열리도록 캐시
    앱 데이터(기록)는 localStorage에 있어서 이 캐시와는 무관하다. */
-var CACHE = 'budget-app-v10';
+var CACHE = 'budget-app-v11';
 var ASSETS = [
   './',
   './index.html',

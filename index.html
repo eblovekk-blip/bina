@@ -471,12 +471,13 @@
   .asset-top .sum-invest b{ font-weight:500; }
   .asset-actions{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:14px; }
   .asset-actions .btn{ height:42px; font-size:13.5px; }
-  .eye-pill{
-    margin-left:auto; display:inline-flex; align-items:center; gap:5px; padding:7px 12px;
-    border-radius:999px; background:var(--surface); border:1px solid var(--line);
-    font-size:12.5px; color:var(--sub); white-space:nowrap;
+  /* 금액 숫자를 손가락으로 탭하면 바로 보이기/숨기기 (별도 버튼 없음) */
+  .tap-money{
+    cursor:pointer; -webkit-user-select:none; user-select:none;
+    -webkit-tap-highlight-color:transparent; touch-action:manipulation;
+    padding:6px 10px; margin:-6px -10px; border-radius:12px;
   }
-  .eye-pill:active{ background:var(--surface-3); }
+  .tap-money:active{ background:var(--surface-3); }
   .masked{ letter-spacing:.08em; }
   .net-delta{ margin-top:12px; font-size:13px; color:var(--sub); text-align:center; }
   .net-delta b{ font-weight:500; }
@@ -716,7 +717,6 @@
   <section id="view-home" aria-label="홈">
     <div class="monthbar">
       <div class="month-title" id="homeGreet">안녕하세요</div>
-      <button class="eye-pill" id="homeEyeBtn" type="button">👁️ 금액 보기</button>
     </div>
 
     <div class="card" id="homeBudgetCard" role="button" tabindex="0">
@@ -724,7 +724,7 @@
         <h2>이번 달 남은 예산</h2>
         <span class="hint num" id="homeBudgetHint"></span>
       </div>
-      <div class="home-budget-val num" id="homeBudgetLeft">••••••원 남음</div>
+      <div class="home-budget-val num" id="homeBudgetLeft">예산 확인 중</div>
       <div class="bar" style="margin-top:10px"><div class="bar-fill" id="homeBudgetBar" style="width:0%"></div></div>
       <div class="home-budget-sub" id="homeBudgetSub">예산을 정하면 남은 금액과 하루 쓸 수 있는 돈을 알려 드려요</div>
     </div>
@@ -751,7 +751,7 @@
     </div>
 
     <div class="home-foot">
-      <button type="button" id="homeFootAsset">순자산 <b class="num" id="homeFootNet">••••</b> ›</button>
+      <button type="button" id="homeFootAsset">순자산 <b class="num tap-money" id="homeFootNet" title="탭하면 금액이 보여요">••••</b> ›</button>
       <button type="button" id="homeFootWedding">결혼 <b class="num" id="homeFootDday">D-day</b> ›</button>
     </div>
   </section>
@@ -864,13 +864,12 @@
   <section id="view-asset" hidden aria-label="자산">
     <div class="monthbar">
       <div class="month-title">자산</div>
-      <button class="eye-pill" id="assetEyeBtn" type="button">👁️ 금액 보기</button>
     </div>
 
     <div class="card asset-top">
       <div class="net-banner">
-        <div class="nb main"><div class="l">총자산</div><div class="v num" id="netTotal">₩0</div></div>
-        <div class="nb"><div class="l">총부채</div><div class="v num" id="netDebt">₩0</div></div>
+        <div class="nb main"><div class="l">총자산</div><div class="v num tap-money" id="netTotal" role="button" tabindex="0" aria-label="총자산 금액 보기">••••••원</div></div>
+        <div class="nb"><div class="l">총부채</div><div class="v num tap-money" id="netDebt" role="button" tabindex="0" aria-label="총부채 금액 보기">••••••원</div></div>
         <div class="nb"><div class="l">순자산비율</div><div class="v num" id="netRatio">—</div></div>
       </div>
       <div class="net-delta num" id="netDelta">스냅샷을 저장하면 증감을 볼 수 있어요</div>
@@ -902,7 +901,6 @@
   <section id="view-wedding" hidden aria-label="결혼">
     <div class="monthbar">
       <div class="month-title">결혼</div>
-      <button class="eye-pill" id="wedEyeBtn" type="button">👁️ 금액 보기</button>
     </div>
 
     <div class="card wed-hero">
@@ -1658,9 +1656,7 @@
   ========================================================= */
   function renderHome() {
     var t = assetTotals();
-    var shown = ui.showMoney;
-    var mask = function (v) { return shown ? won(v) : '••••••원'; };
-    $('homeEyeBtn').textContent = shown ? '🙈 금액 숨기기' : '👁️ 금액 보기';
+    var shown = ui.showMoney;   // 기본 숨김은 맨 아래 '순자산' 숫자에만 적용
 
     var key = monthKey(nowD.getFullYear(), nowD.getMonth());
     var list = entriesOfMonth(key);
@@ -1676,10 +1672,10 @@
       leftEl.textContent = '예산 미설정';
       leftEl.classList.remove('over');
     } else if (left >= 0) {
-      leftEl.textContent = (shown ? won(left) : '••••••원') + ' 남음';
+      leftEl.textContent = won(left) + ' 남음';
       leftEl.classList.remove('over');
     } else {
-      leftEl.textContent = (shown ? won(-left) : '••••••원') + ' 초과';
+      leftEl.textContent = won(-left) + ' 초과';
       leftEl.classList.add('over');
     }
     $('homeBudgetHint').textContent = budget ? Math.round(mt.expense / budget * 100) + '%' : '';
@@ -1688,10 +1684,8 @@
     bar.className = 'bar-fill' + (budget && mt.expense > budget ? ' over' : (budget && pct >= 70 ? ' warn' : ''));
     $('homeBudgetSub').innerHTML = !budget
       ? '가계부 탭에서 이번 달 예산을 정해 보세요'
-      : !shown
-        ? '예산의 ' + Math.round(mt.expense / budget * 100) + '% 사용'
-        : '월 예산 ' + won(budget) + ' 중 <b>' + won(mt.expense) + '</b> 사용 · ' +
-          (left >= 0 ? '오늘부터 하루 약 <b>' + won(perDay) + '</b>씩' : '예산을 넘었어요');
+      : '월 예산 ' + won(budget) + ' 중 <b>' + won(mt.expense) + '</b> 사용 · ' +
+        (left >= 0 ? '오늘부터 하루 약 <b>' + won(perDay) + '</b>씩' : '예산을 넘었어요');
 
     // 많이 쓴 곳 TOP 4
     var tops = byCategory(list).slice(0, 4);
@@ -1700,7 +1694,7 @@
       return '<div class="topcat">' +
         '<span class="nm">' + esc(c.name) + '</span>' +
         '<span class="track"><i style="width:' + Math.max(3, share).toFixed(1) + '%;background:' + c.color + '"></i></span>' +
-        '<span class="amt num">' + (shown ? shortMoney(c.value) : '••••') + '</span>' +
+        '<span class="amt num">' + shortMoney(c.value) + '</span>' +
         '<span class="pct num">' + Math.round(share) + '%</span></div>';
     }).join('') : '<p class="fine" style="margin:0">이번 달 지출 기록이 아직 없어요.</p>';
 
@@ -1717,14 +1711,17 @@
         '<span class="mid"><span class="t1">' + esc(e.memo || e.category) + '</span>' +
         '<span class="t2">' + esc(e.category) + ' · ' + esc(e.method) + '</span></span>' +
         '<span class="amt num ' + (e.type === 'income' ? 'in' : '') + '">' +
-          (shown ? sign + fmtNum(e.amount) : '••••') + '</span></button>';
+          (sign + fmtNum(e.amount)) + '</span></button>';
     }).join('') : '<p class="fine" style="margin:0">아직 기록이 없어요. 위 <b>＋ 지출 기록</b>으로 바로 남겨 보세요.</p>';
     $('homeRecent').querySelectorAll('.hrow[data-eid]').forEach(function (b) {
       b.addEventListener('click', function () { openEntry(this.getAttribute('data-eid')); });
     });
 
-    // 맨 아래 참고 링크
-    $('homeFootNet').textContent = shown ? wonKo(t.net) : '••••';
+    // 맨 아래 참고 링크 (순자산 숫자는 탭하면 보임)
+    var footNet = $('homeFootNet');
+    footNet.textContent = shown ? wonKo(t.net) : '••••';
+    footNet.setAttribute('title', shown ? '탭하면 금액을 숨겨요' : '탭하면 금액이 보여요');
+    footNet.setAttribute('aria-label', shown ? '순자산 금액 숨기기' : '순자산 금액 보기');
     $('homeFootDday').textContent = ddayText();
   }
 
@@ -2259,7 +2256,8 @@
     $('netTotal').textContent = mask(t.total);
     $('netDebt').textContent = mask(t.debt);
     $('netRatio').textContent = t.total > 0 ? (t.net / t.total * 100).toFixed(1) + '%' : '—';
-    $('assetEyeBtn').textContent = ui.showMoney ? '🙈 금액 숨기기' : '👁️ 금액 보기';
+    $('netTotal').setAttribute('aria-label', ui.showMoney ? '총자산 금액 숨기기' : '총자산 금액 보기');
+    $('netDebt').setAttribute('aria-label', ui.showMoney ? '총부채 금액 숨기기' : '총부채 금액 보기');
 
     var key = monthKey(nowD.getFullYear(), nowD.getMonth());
     var prev = latestSnapshotBefore(key);
@@ -2268,7 +2266,8 @@
     if (prev) {
       diff = t.net - prev.value;
       var sign = diff > 0 ? '+' : (diff < 0 ? '-' : '');
-      deltaEl.innerHTML = prev.month.replace('-', '.') + ' 기록 대비 <b class="' + (diff >= 0 ? 'up' : 'down') + '">' + sign + fmtNum(Math.abs(diff)) + '원</b>';
+      deltaEl.innerHTML = prev.month.replace('-', '.') + ' 기록 대비 <b class="' + (diff >= 0 ? 'up' : 'down') + '">' +
+        (ui.showMoney ? sign + fmtNum(Math.abs(diff)) + '원' : '••••원') + '</b>';
     } else {
       deltaEl.textContent = '스냅샷을 저장하면 이전 기록 대비 증감을 볼 수 있어요';
     }
@@ -2380,8 +2379,7 @@
   function renderWeddingTab() {
     var w = weddingTotals();
     $('wedDday').textContent = ddayText();
-    $('wedEyeBtn').textContent = ui.showMoney ? '🙈 금액 숨기기' : '👁️ 금액 보기';
-    var show = function (v) { return ui.showMoney ? won(v) : '••••••원'; };
+    var show = function (v) { return won(v); };
     $('wedBudget').textContent = show(w.budget);
     $('wedSpent').textContent = show(w.spent);
     var left = w.budget - w.spent;
@@ -4001,7 +3999,7 @@
     $('confirmYes').addEventListener('click', function () { answerConfirm(true); });
     $('confirmNo').addEventListener('click', function () { answerConfirm(false); });
 
-    // 금액 보기/숨기기 토글 (홈·자산·결혼 상단 눈 아이콘 공통)
+    // 금액 숫자 자체를 탭하면 보이기/숨기기 (버튼 없음 · 자산 탭 메인 숫자·홈 하단 순자산만)
     function toggleMoney() { ui.showMoney = !ui.showMoney; render(); }
     function goTab(tab, bookView) {
       ui.tab = tab;
@@ -4009,9 +4007,16 @@
       saveUi(); render();
       window.scrollTo(0, 0);
     }
-    $('homeEyeBtn').addEventListener('click', toggleMoney);
-    $('assetEyeBtn').addEventListener('click', toggleMoney);
-    $('wedEyeBtn').addEventListener('click', toggleMoney);
+    ['netTotal', 'netDebt', 'homeFootNet'].forEach(function (id) {
+      var el = $(id);
+      if (!el) return;
+      el.addEventListener('click', function (ev) { ev.stopPropagation(); toggleMoney(); });
+      el.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter' || ev.key === ' ' || ev.key === 'Spacebar') {
+          ev.preventDefault(); ev.stopPropagation(); toggleMoney();
+        }
+      });
+    });
     $('homeFootAsset').addEventListener('click', function () { goTab('asset'); });
     $('homeFootWedding').addEventListener('click', function () { goTab('wedding'); });
     $('weddingAddBtn').addEventListener('click', function () { openWedding(null, ''); });
