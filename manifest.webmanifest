@@ -9,7 +9,7 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui", "browser"],
   "background_color": "#FAFAFA",
-  "theme_color": "#FAFAFA",
+  "theme_color": "#FFFFFF",
   "categories": ["finance", "productivity", "utilities"],
   "icons": [
     {
