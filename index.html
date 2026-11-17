@@ -662,14 +662,28 @@
   .sync-dot.warn{ background:var(--amber); box-shadow:0 0 0 3px rgba(217,119,6,.16); }
   .sync-dot.busy{ background:var(--accent); animation:syncPulse 1s ease-in-out infinite; }
   @keyframes syncPulse{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
-  .sync-badge{
-    display:inline-flex; align-items:center; gap:3px; margin-left:5px; padding:2px 7px;
-    border-radius:999px; background:var(--accent-weak); color:var(--accent-ink);
-    font-size:10.5px; font-weight:400; letter-spacing:0; vertical-align:1px;
+  /* 헤더 아래 한 줄짜리 시트 저장 상태 바 */
+  .syncbar{
+    display:flex; align-items:center; gap:6px; width:100%; max-width:1040px; margin:0 auto;
+    min-height:26px; padding:4px 16px 5px;
+    background:transparent; color:var(--muted); border:0; text-align:left;
+    font-family:inherit; font-size:11.5px; font-weight:400; line-height:1.35; letter-spacing:-.01em;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+    transition:background .15s ease, color .15s ease;
   }
-  .sync-badge.busy{ background:rgba(217,119,6,.14); color:#B45309; }
-  .sync-badge.err{ background:rgba(225,29,72,.1); color:#BE123C; }
-  .sync-badge[hidden]{ display:none; }
+  .syncbar .sb-text{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .syncbar .sb-dot{ width:6px; height:6px; border-radius:50%; background:#D6D6D1; flex:0 0 auto; }
+  .syncbar .sb-dot.on{ background:var(--income); box-shadow:0 0 0 3px rgba(16,185,129,.14); }
+  .syncbar .sb-dot.busy{ background:var(--accent); animation:syncPulse 1s ease-in-out infinite; }
+  .syncbar .sb-dot.warn{ background:var(--amber); box-shadow:0 0 0 3px rgba(217,119,6,.15); }
+  .syncbar .sb-dot.err{ background:#E11D48; box-shadow:0 0 0 3px rgba(225,29,72,.12); }
+  .syncbar .sb-go{ flex:0 0 auto; font-size:12px; opacity:.55; }
+  .syncbar.pending{ background:rgba(217,119,6,.10); color:#8A4B00; }
+  .syncbar.pending .sb-go{ opacity:.75; }
+  .syncbar.expired{ background:rgba(225,29,72,.07); color:#9F1239; }
+  .syncbar.error{ background:rgba(225,29,72,.05); color:#9F1239; }
+  .syncbar.busy{ color:#8A4B00; }
+  .syncbar:active{ background:rgba(15,23,42,.05); }
 
   /* ---------- toast ---------- */
   .toast{
@@ -837,7 +851,7 @@
       <div class="logo" aria-hidden="true">₩</div>
       <div>
         나의 가계부
-        <small><span id="todayLabel">오늘</span><button class="sync-badge" id="syncBadge" type="button" title="Google 계정 연동">Google</button></small>
+        <small><span id="todayLabel">오늘</span></small>
       </div>
     </div>
     <div class="topbar-right">
@@ -845,6 +859,11 @@
       <button class="icon-btn" id="settingsBtn" aria-label="설정" title="설정">⚙</button>
     </div>
   </div>
+  <button class="syncbar" id="syncBadge" type="button" aria-live="polite" title="Google 계정 연동">
+    <span class="sb-dot" id="syncBarDot" aria-hidden="true"></span>
+    <span class="sb-text" id="syncBarText">시트 상태 확인 중</span>
+    <span class="sb-go" id="syncBarGo" aria-hidden="true">›</span>
+  </button>
 </header>
 
 <div class="wrap">
@@ -2294,7 +2313,7 @@
     saveStorage();
     closeModal('budgetModal');
     render();
-    showToast('예산을 저장했어요' + (catCount ? ' · 카테고리 ' + catCount + '개' : ''));
+    showSavedToast('예산을 저장했어요' + (catCount ? ' · 카테고리 ' + catCount + '개' : ''));
   }
 
   /* =========================================================
@@ -3283,7 +3302,7 @@
     view.m = target.getMonth();
     if (ui.tab !== 'book') ui.tab = 'book';
     render();
-    showToast(wasEditing ? '기록을 수정했어요' : won(amount) + ' ' + typeLabel(form.type) + '을 저장했어요');
+    showSavedToast(wasEditing ? '기록을 수정했어요' : won(amount) + ' ' + typeLabel(form.type) + '을 저장했어요');
     editingId = null;
   }
   function deleteEntry() {
@@ -3367,7 +3386,7 @@
     closeModal('assetModal');
     ui.editingAssetId = null;
     render();
-    showToast('자산을 저장했어요');
+    showSavedToast('자산을 저장했어요');
   }
   function deleteAsset() {
     var id = ui.editingAssetId;
@@ -3484,7 +3503,7 @@
     closeModal('weddingModal');
     ui.editingWeddingId = null;
     render();
-    showToast('결혼 항목을 저장했어요');
+    showSavedToast('결혼 항목을 저장했어요');
   }
   function deleteWedding() {
     var id = ui.editingWeddingId;
@@ -3532,6 +3551,17 @@
     t.classList.add('show');
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
+
+  /* 저장 직후 피드백: 폰(localStorage)에는 이미 저장됐고, 시트에는 올라갔거나 올라가는 중이라는 걸 함께 알려 준다 */
+  function showSavedToast(base) {
+    if (!storageOK) { showToast(base); return; }
+    var n = (typeof sync !== 'undefined' && sync.queue) ? sync.queue.length : 0;
+    var tail;
+    if (typeof sync === 'undefined' || !syncReady()) tail = '폰에 저장됨';
+    else if (syncHasToken()) tail = '폰에 저장됨 · 시트로 올리는 중';
+    else tail = '폰에 저장됨 · 시트 대기 ' + fmtNum(n || 1) + '건';
+    showToast(base + ' · ' + tail);
   }
 
   /* =========================================================
@@ -3714,6 +3744,7 @@
   var OAUTH_CLIENT_KEY = 'household_book_oauth_client_id_v1';
   var SHEET_ID_KEY = 'household_book_sheet_id_v1';
   var OAUTH_TOKEN_KEY = 'household_book_oauth_token_v1';
+  var EVER_CONNECTED_KEY = 'household_book_ever_connected_v1';
   var LEGACY_SYNC_URL_KEY = 'household_book_sync_url_v1';
   var SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
   var SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets/';
@@ -3723,8 +3754,8 @@
 
   var sync = {
     clientId: '', sheetId: '',
-    token: '', tokenExpiresAt: 0,
-    busy: false, needLogin: false, authToastShown: false,
+    token: '', tokenExpiresAt: 0, everConnected: false,
+    busy: false, loggingIn: false, needLogin: false, authToastShown: false,
     lastError: '', lastSync: 0,
     queue: [],
     entryPos: null, budgetPos: null, assetPos: null, weddingPos: null,
@@ -3758,6 +3789,7 @@
       var q = JSON.parse(window.localStorage.getItem(SYNC_QUEUE_KEY) || '[]');
       sync.queue = Array.isArray(q) ? q.filter(function (o) { return o && o.action; }) : [];
     } catch (e) { sync.queue = []; }
+    try { sync.everConnected = window.localStorage.getItem(EVER_CONNECTED_KEY) === '1'; } catch (e) { sync.everConnected = false; }
     try { window.localStorage.removeItem(LEGACY_SYNC_URL_KEY); } catch (e) {}
     sync.needLogin = !syncHasToken();
   }
@@ -3782,6 +3814,10 @@
     sync.token = String(resp.access_token || '');
     var ttl = Number(resp.expires_in) || 3600;
     sync.tokenExpiresAt = Date.now() + ttl * 1000;
+    sync.needLogin = false;
+    sync.authToastShown = false;
+    sync.everConnected = true;
+    try { window.localStorage.setItem(EVER_CONNECTED_KEY, '1'); } catch (e) {}
     try {
       window.localStorage.setItem(OAUTH_TOKEN_KEY, JSON.stringify({
         access_token: sync.token, expiresAt: sync.tokenExpiresAt, savedAt: Date.now()
@@ -3799,6 +3835,64 @@
   function syncReady() { return !!(sync.clientId && sync.sheetId); }
   function syncHasToken() { return !!(sync.token && sync.tokenExpiresAt > Date.now() + 20000); }
   function syncClientIdLooksValid(id) { return /^[0-9A-Za-z\-_.]+\.apps\.googleusercontent\.com$/.test(id); }
+
+  /* ---- 액세스 토큰 조용한 자동 갱신 (prompt: 'none') ----
+     · 시트를 읽거나 쓰기 전에 토큰이 없거나 만료됐으면, 팝업 없이 1회 갱신을 먼저 시도한다.
+     · 브라우저에 구글 로그인이 살아 있으면 팝업 없이 그대로 시트를 읽고 쓴다.
+     · 실패(interaction_required·timeout·팝업 차단 등)하면 조용히 포기하고,
+       사용자가 배지를 눌렀을 때만 로그인 팝업(프롬프트)을 띄운다. */
+  var SYNC_SILENT_TIMEOUT = 4000;
+  var syncSilentClient = null;
+  var syncSilentClientId = '';
+  var syncSilentPromise = null;
+  var syncSilentLastAt = 0;
+  var syncSilentLastOk = false;
+
+  function syncEnsureToken() {
+    if (syncHasToken()) return Promise.resolve(true);
+    if (!syncReady()) return Promise.resolve(false);
+    if (syncSilentPromise) return syncSilentPromise;
+    // 한 번도 연결한 적이 없으면 조용한 갱신으로 될 수 없으니(동의 필요) 시도하지 않는다
+    if (!sync.everConnected) return Promise.resolve(false);
+    // 실패한 직후 연속 시도(팝업 반복 요청) 방지 — 15초 안에는 다시 시도하지 않는다
+    if (syncSilentLastAt && Date.now() - syncSilentLastAt < 15000) return Promise.resolve(false);
+    var g = window.google;
+    if (!(g && g.accounts && g.accounts.oauth2 && g.accounts.oauth2.initTokenClient)) return Promise.resolve(false);
+    syncSilentPromise = new Promise(function (resolve) {
+      var settled = false;
+      var timer = null;
+      function finish(ok) {
+        if (settled) return;
+        settled = true;
+        if (timer) clearTimeout(timer);
+        syncSilentPromise = null;
+        syncSilentLastAt = Date.now();
+        syncSilentLastOk = !!ok;
+        resolve(!!ok);
+      }
+      timer = setTimeout(function () { finish(false); }, SYNC_SILENT_TIMEOUT);
+      try {
+        if (!syncSilentClient || syncSilentClientId !== sync.clientId) {
+          syncSilentClient = g.accounts.oauth2.initTokenClient({
+            client_id: sync.clientId,
+            scope: SHEETS_SCOPE,
+            ux_mode: 'popup',
+            callback: function (resp) {
+              if (!resp || resp.error || !resp.access_token) { finish(false); return; }
+              syncSaveToken(resp);
+              sync.lastError = '';
+              renderSyncStatus();
+              finish(true);
+            },
+            error_callback: function () { finish(false); }
+          });
+          syncSilentClientId = sync.clientId;
+        }
+        syncSilentClient.requestAccessToken({ prompt: 'none' });
+      } catch (e) { finish(false); }
+    });
+    return syncSilentPromise;
+  }
 
   /* ---- 로그인 ---- */
   function syncInitTokenClient() {
@@ -3838,11 +3932,13 @@
       return false;
     }
     sync.busy = true;
+    sync.loggingIn = true;
     sync.lastError = '';
     renderSyncStatus();
     try { client.requestAccessToken({}); }
     catch (err) {
       sync.busy = false;
+      sync.loggingIn = false;
       renderSyncStatus();
       if (!opts.silent) showToast('Google 로그인 창을 열지 못했어요 · 팝업 차단을 확인해 주세요');
       return false;
@@ -3860,12 +3956,15 @@
   function syncIsCancel(text) { return /닫혀서 취소|권한 승인이 취소|popup_closed|access_denied/.test(String(text || '')); }
   function syncHandleLoginFailure(err) {
     var msg = syncOAuthErrorText(err);
+    sync.busy = false;
+    sync.loggingIn = false;
     if (!syncIsCancel(msg)) sync.lastError = msg;
     renderSyncStatus();
     showToast('Google 로그인에 실패했어요 · ' + msg);
   }
   function syncOnToken(resp) {
     sync.busy = false;
+    sync.loggingIn = false;
     if (!resp || resp.error || !resp.access_token) {
       syncHandleLoginFailure(resp);
       return;
@@ -3904,9 +4003,12 @@
     syncClearToken();
     sync.needLogin = true;
     sync.lastError = '';
+    renderSyncStatus();
     if (!sync.authToastShown) {
       sync.authToastShown = true;
-      showToast('Google 로그인이 만료됐어요 · 다시 로그인하면 밀린 기록이 올라가요');
+      showToast(sync.queue.length
+        ? '연결이 만료됐어요 · 폰에 저장된 ' + sync.queue.length + '건은 위 배지를 누르면 바로 올라가요'
+        : '연결이 만료됐어요 · 위 배지를 누르면 바로 다시 연결돼요');
     }
   }
 
@@ -4340,16 +4442,22 @@
     }
     return Promise.resolve(null);
   }
-  function syncFlush() {
+  function syncFlush(depth) {
+    depth = Number(depth) || 0;
     if (!syncReady() || sync.busy || !sync.queue.length) { renderSyncStatus(); return Promise.resolve(false); }
-    if (!syncHasToken()) {
-      sync.needLogin = true;
-      renderSyncStatus();
-      return Promise.resolve(false);
-    }
     if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
       renderSyncStatus();
       return Promise.resolve(false);
+    }
+    if (!syncHasToken()) {
+      // 팝업 없이 조용한 갱신 1회 시도 → 성공하면 그대로 올린다
+      sync.needLogin = true;
+      renderSyncStatus();
+      if (depth > 0) return Promise.resolve(false);
+      return syncEnsureToken().then(function (ok) {
+        if (!ok) return false;
+        return syncFlush(depth + 1);
+      });
     }
     sync.busy = true;
     renderSyncStatus();
@@ -4362,10 +4470,19 @@
       sync.lastError = '';
       sync.lastSync = Date.now();
       renderSyncStatus();
-      if (sync.queue.length) return syncFlush();
+      if (sync.queue.length) return syncFlush(depth);
       return true;
     }).catch(function (err) {
       sync.busy = false;
+      if (err && err.status === 401 && depth < 2) {
+        syncClearToken();
+        sync.needLogin = true;
+        renderSyncStatus();
+        return syncEnsureToken().then(function (ok) {
+          if (!ok) { syncMarkAuthExpired(); return false; }
+          return syncFlush(depth + 1);
+        });
+      }
       if (err && err.status === 401) syncMarkAuthExpired();
       else sync.lastError = syncErrText(err);
       if (sync.queue.length) {
@@ -4496,12 +4613,6 @@
       renderSyncStatus();
       return Promise.resolve(false);
     }
-    if (!syncHasToken()) {
-      sync.needLogin = true;
-      renderSyncStatus();
-      if (!opts.silent) showToast('Google 로그인이 필요해요 · 로그인하면 시트와 맞춰요');
-      return Promise.resolve(false);
-    }
     if (sync.busy) return Promise.resolve(false);
     if (typeof navigator !== 'undefined' && navigator && navigator.onLine === false) {
       sync.lastError = '인터넷에 연결되어 있지 않아요';
@@ -4509,24 +4620,48 @@
       if (!opts.silent) showToast('오프라인이에요 · 연결되면 다시 맞출게요');
       return Promise.resolve(false);
     }
-    sync.busy = true;
-    sync.lastError = '';
-    renderSyncStatus();
-    return syncSheetRead().then(function (remote) {
-      sync.busy = false;
-      sync.needLogin = false;
-      sync.lastSync = Date.now();
-      var count = syncApplyRemote(remote);
+
+    var readSheet = function (retried) {
+      sync.busy = true;
+      sync.lastError = '';
       renderSyncStatus();
-      if (!opts.silent) showToast('시트와 맞췄어요 · 기록 ' + fmtNum(count) + '건');
-      return syncFlush().then(function () { return true; });
-    }).catch(function (err) {
-      sync.busy = false;
-      if (err && err.status === 401) syncMarkAuthExpired();
-      else sync.lastError = syncErrText(err);
-      renderSyncStatus();
-      if (!opts.silent) showToast('시트 연결에 실패했어요 · ' + (sync.lastError || '권한을 확인해 주세요'));
-      return false;
+      return syncSheetRead().then(function (remote) {
+        sync.busy = false;
+        sync.needLogin = false;
+        sync.lastSync = Date.now();
+        var count = syncApplyRemote(remote);
+        renderSyncStatus();
+        if (!opts.silent) showToast('시트와 맞췄어요 · 기록 ' + fmtNum(count) + '건');
+        return syncFlush().then(function () { return true; });
+      }).catch(function (err) {
+        sync.busy = false;
+        if (err && err.status === 401 && !retried) {
+          // 토큰만 만료된 경우: 팝업 없이 조용히 한 번 갱신하고 같은 요청을 다시 보낸다
+          syncClearToken();
+          sync.needLogin = true;
+          renderSyncStatus();
+          return syncEnsureToken().then(function (ok) {
+            if (!ok) { syncMarkAuthExpired(); return false; }
+            return readSheet(true);
+          });
+        }
+        if (err && err.status === 401) syncMarkAuthExpired();
+        else sync.lastError = syncErrText(err);
+        renderSyncStatus();
+        if (!opts.silent) showToast('시트 연결에 실패했어요 · ' + (sync.lastError || '권한을 확인해 주세요'));
+        return false;
+      });
+    };
+
+    // 시트를 읽기 전에 토큰부터 확보한다(있으면 그대로, 없으면 조용한 자동 갱신 1회)
+    return syncEnsureToken().then(function (ok) {
+      if (!ok) {
+        sync.needLogin = true;
+        renderSyncStatus();
+        if (!opts.silent) showToast('다시 연결이 필요해요 · 위 배지를 누르면 바로 연결돼요');
+        return false;
+      }
+      return readSheet(false);
     });
   }
 
@@ -4535,24 +4670,46 @@
     var d = new Date(ts);
     return pad(d.getMonth() + 1) + '/' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
   }
+  /* 상태: setup(연동 전) · connect(처음 연결 대기) · busy(주고받는 중) · pending(폰에만 저장됨) · expired(연결 만료) · error(연결 문제) · saved(시트에 저장됨) */
   function syncStateName() {
     if (!syncReady()) return 'setup';
-    if (sync.busy) return 'busy';
-    if (!syncHasToken()) return 'login';
+    if (sync.busy) return sync.loggingIn ? 'logging' : 'busy';
+    if (sync.queue.length) return 'pending';
+    if (!syncHasToken()) return sync.everConnected ? 'expired' : 'connect';
     if (sync.lastError) return 'error';
-    return 'on';
+    return 'saved';
+  }
+  function syncBarLabel(st) {
+    var n = sync.queue.length;
+    if (st === 'setup') return 'Google 시트 연동하기 · 눌러서 설정';
+    if (st === 'connect') return 'Google 시트 연결 · 눌러서 로그인';
+    if (st === 'logging') return 'Google 계정 연결 중…';
+    if (st === 'busy') return n > 1 ? '시트에 저장하는 중… (대기 ' + fmtNum(n) + '건)' : '시트에 저장하는 중…';
+    if (st === 'pending') return '폰에 저장됨 · 시트 대기 ' + fmtNum(n) + '건' + (syncHasToken() ? '' : ' · 탭해서 재연결');
+    if (st === 'expired') return '연결 만료 · 탭해서 재연결';
+    if (st === 'error') return '시트 확인 필요 · 탭해서 다시';
+    return '시트 저장됨' + (sync.lastSync ? ' · ' + syncTimeText(sync.lastSync) : '');
+  }
+  function syncBarTitle(st) {
+    if (st === 'setup') return '눌러서 Google 시트 연결 설정 열기';
+    if (st === 'connect') return '눌러서 Google 계정 연결';
+    if (st === 'logging') return 'Google 계정을 연결하는 중';
+    if (st === 'busy') return '시트에 저장하는 중';
+    if (st === 'pending') return (syncHasToken() ? '눌러서 지금 시트에 올리기' : '눌러서 다시 연결하고 밀린 기록 올리기') + (sync.lastError ? ' · ' + sync.lastError : '');
+    if (st === 'expired') return '눌러서 Google 계정 다시 연결';
+    if (st === 'error') return '연결 문제 · ' + (sync.lastError || '눌러서 다시 시도');
+    return '시트에 저장됨 · 눌러서 다시 맞추기';
   }
   function renderSyncStatus() {
     var st = syncStateName();
-    var badge = $('syncBadge');
-    if (badge) {
-      badge.hidden = false;
-      badge.className = 'sync-badge' + (st === 'busy' ? ' busy' : (st === 'login' || st === 'error' ? ' err' : ''));
-      badge.textContent = st === 'busy' ? '⇅ 동기화 중'
-        : (st === 'on' ? '⇅ 시트'
-        : (st === 'login' ? 'Google 로그인'
-        : (st === 'setup' ? 'Google' : '⇅ 확인')));
-      badge.title = st === 'login' ? '눌러서 Google 로그인' : (st === 'on' ? '눌러서 시트와 새로 맞추기' : 'Google 계정 연동 설정');
+    var bar = $('syncBadge');
+    if (bar) {
+      bar.className = 'syncbar ' + st;
+      var btxt = $('syncBarText');
+      if (btxt) btxt.textContent = syncBarLabel(st);
+      var bdot = $('syncBarDot');
+      if (bdot) bdot.className = 'sb-dot' + (st === 'saved' ? ' on' : (st === 'busy' || st === 'logging' ? ' busy' : (st === 'pending' ? ' warn' : (st === 'setup' || st === 'connect' ? '' : ' err'))));
+      bar.title = syncBarTitle(st);
     }
     var dot = $('syncDot');
     var txt = $('syncStatus');
@@ -4564,17 +4721,26 @@
       } else if (st === 'busy') {
         cls += ' busy';
         msg = '시트와 동기화하는 중…';
-      } else if (st === 'login') {
+      } else if (st === 'logging') {
+        cls += ' busy';
+        msg = 'Google 계정을 연결하는 중…';
+      } else if (st === 'pending') {
         cls += ' warn';
-        msg = 'Google 로그인이 필요해요 · 로그인하면 기록이 시트에 함께 저장돼요';
+        msg = '폰에 저장된 변경 ' + sync.queue.length + '건이 시트로 올라가기를 기다려요' +
+          (syncHasToken() ? ' · 잠시 뒤 자동으로 올라가요' : ' · 로그인하면 밀린 기록이 올라가요');
+      } else if (st === 'connect') {
+        cls += ' warn';
+        msg = 'Google 계정을 연결하면 기록이 이 브라우저와 시트에 함께 저장돼요';
+      } else if (st === 'expired') {
+        cls += ' err';
+        msg = '연결이 만료됐어요 · 다시 연결하면 시트와 맞춰요';
       } else if (st === 'error') {
         cls += ' err';
         msg = '연결 문제 · ' + sync.lastError;
       } else {
         cls += ' on';
-        msg = 'Google 연결됨' + (sync.lastSync ? ' · 마지막 ' + syncTimeText(sync.lastSync) : '');
+        msg = 'Google 시트에 저장됨' + (sync.lastSync ? ' · 마지막 ' + syncTimeText(sync.lastSync) : '');
       }
-      if (sync.queue.length) msg += ' · 대기 ' + sync.queue.length + '건';
       dot.className = cls;
       txt.textContent = msg;
     }
@@ -4870,15 +5036,19 @@
     if ($('googleLogoutBtn')) $('googleLogoutBtn').addEventListener('click', syncLogoutAsk);
     if ($('syncBadge')) $('syncBadge').addEventListener('click', function () {
       if (!syncReady()) { openSettings(); return; }
+      // 토큰이 없으면 탭한 순간 바로 로그인 팝업으로 재연결하고, 이어서 밀린 기록을 올린다
       if (!syncHasToken()) { syncLogin(); return; }
       syncNow({ silent: false });
     });
     window.addEventListener('online', function () { if (syncReady()) syncFlush(); });
     window.addEventListener('offline', function () { renderSyncStatus(); });
     document.addEventListener('visibilitychange', function () {
-      if (document.visibilityState !== 'visible' || !syncHasToken()) return;
+      if (document.visibilityState !== 'visible' || !syncReady()) return;
       if (Date.now() - (sync.lastSync || 0) < 60000) return;
-      syncNow({ silent: true });
+      if (Date.now() - syncSilentLastAt < 60000) return;  // 조용한 갱신 연타 방지
+      if (syncHasToken()) { syncNow({ silent: true }); return; }
+      if (sync.queue.length) { syncFlush(); return; }
+      syncEnsureToken().then(function (ok) { if (ok) syncNow({ silent: true }); });
     });
     $('exportJson').addEventListener('click', exportJson);
     $('exportCsv').addEventListener('click', exportCsv);
@@ -5213,8 +5383,22 @@
     render();
     syncLoadPrefs();
     renderSyncStatus();
-    if (syncReady() && syncHasToken()) {
-      setTimeout(function () { syncNow({ silent: true }); }, 700);
+    if (syncReady()) {
+      // 앱을 열 때 토큰이 있으면 그대로, 만료됐으면 팝업 없이 조용히 한 번 갱신을 시도한다
+      setTimeout(function () {
+        if (syncHasToken()) { syncNow({ silent: true }); return; }
+        syncEnsureToken().then(function (ok) {
+          if (ok) { syncNow({ silent: true }); return; }
+          renderSyncStatus();
+          // 구글 로그인 스크립트가 늦게 로딩됐을 수 있으니 한 번 더
+          setTimeout(function () {
+            if (syncHasToken()) return;
+            syncEnsureToken().then(function (ok2) {
+              if (ok2) syncNow({ silent: true }); else renderSyncStatus();
+            });
+          }, 2500);
+        });
+      }, 700);
     }
   }
 
@@ -5237,6 +5421,7 @@
     syncLoadPrefs: syncLoadPrefs, syncSaveClientId: syncSaveClientId, syncSaveSheetId: syncSaveSheetId,
     syncSaveQueue: syncSaveQueue,
     syncLogin: syncLogin, syncLogoutAsk: syncLogoutAsk, syncSheetRead: syncSheetRead, syncHasToken: syncHasToken,
+    syncEnsureToken: syncEnsureToken, syncStateName: syncStateName,
     renderSyncStatus: renderSyncStatus, render: render,
     saveEntry: saveEntry, deleteEntry: deleteEntry, openBudgetModal: openBudgetModal, saveBudgetModal: saveBudgetModal,
     openAsset: openAsset, saveAsset: saveAsset, openWedding: openWedding, saveWedding: saveWedding,
