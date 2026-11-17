@@ -2317,7 +2317,7 @@
         '<span class="cg-use num"><b>' + won(r.sum) + '</b>' + (r.target ? ' / ' + won(r.target) : '') + '</span>' +
         '</div>';
       var track = r.target
-        ? '<div class="cg-track"><i class="' + (done ? 'done' : '') + '" style="width:' + (done ? 100 : Math.max(2, Math.min(100, pct))) + '%"></i></div>'
+        ? '<div class="cg-track"><i class="' + (done ? 'done' : '') + '" style="width:' + (done ? 100 : (r.sum > 0 ? Math.max(2, Math.min(100, pct)) : 0)) + '%"></i></div>'
         : '';
       var foot;
       if (!r.target) {
