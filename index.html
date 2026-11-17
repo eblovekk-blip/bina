@@ -579,6 +579,9 @@
 
   /* ---------- modal ---------- */
   .modal{ position:fixed; inset:0; z-index:60; display:none; align-items:flex-end; justify-content:center; }
+  /* 설정 안에서 항목 수정·입력 시트를 열 때 시트가 설정 위로 오도록 */
+  #fixedItemModal, #fixedRunModal{ z-index:70; }
+  #confirmModal{ z-index:80; }
   .modal.open{ display:flex; }
   .backdrop{ position:absolute; inset:0; background:rgba(15,23,42,.40); animation:fadeIn .18s ease; }
   .sheet{
