@@ -159,6 +159,33 @@
   .text-btn{ font-size:13px; font-weight:400; color:var(--accent-ink); padding:6px 2px; border-radius:8px; }
   .text-btn:active{ opacity:.6; }
 
+  /* ---------- 홈: 오늘의 절세 팁 ---------- */
+  .tipcard{
+    position:relative; overflow:hidden;
+    background:linear-gradient(165deg,#FFFFFF 36%, var(--accent-weak) 100%);
+    border-color:var(--tint);
+  }
+  .tipcard .card-head{ margin-bottom:9px; }
+  .tip-tag{
+    display:inline-block; margin-bottom:7px; padding:3px 9px; border-radius:999px;
+    background:var(--tint); color:var(--accent-ink);
+    font-size:11.5px; font-weight:500; letter-spacing:-.01em;
+  }
+  .tip-title{ font-size:15.5px; font-weight:600; letter-spacing:-.02em; line-height:1.4; }
+  .tip-desc{ margin-top:5px; font-size:13.5px; color:var(--sub); line-height:1.55; }
+  .tip-foot{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-top:12px; }
+  .tip-dots{ display:flex; align-items:center; gap:5px; }
+  .tip-dot{ display:block; width:6px; height:6px; border-radius:50%; background:var(--line-strong); transition:width .16s ease, background .16s ease; }
+  .tip-dot.on{ width:18px; border-radius:3px; background:var(--accent); }
+  .tip-nav{ display:flex; gap:6px; }
+  .tip-arrow{
+    width:30px; height:30px; display:grid; place-items:center; border-radius:10px;
+    background:var(--surface); border:1px solid var(--line-strong); color:var(--ink-2);
+    font-size:16px; line-height:1; padding:0 0 2px;
+    transition:transform .12s ease, background .12s ease;
+  }
+  .tip-arrow:active{ transform:scale(.94); background:var(--surface-3); }
+
   /* ---------- budget ---------- */
   .budget{ margin-top:12px; }
   .budget-top{ display:flex; align-items:flex-end; justify-content:space-between; gap:12px; margin-bottom:12px; }
@@ -896,6 +923,25 @@
       <div class="bar" style="margin-top:10px"><div class="bar-fill" id="homeBudgetBar" style="width:0%"></div></div>
       <div class="home-budget-sub" id="homeBudgetSub">예산을 정하면 남은 금액과 하루 쓸 수 있는 돈을 알려 드려요</div>
       <div class="home-cmp num" id="homeCmp"></div>
+    </div>
+
+    <div class="card tipcard" id="homeTipCard" style="margin-top:12px" aria-label="오늘의 절세 팁">
+      <div class="card-head">
+        <h2>🧾 오늘의 절세 팁</h2>
+        <span class="hint num" id="homeTipCount">1 / 3</span>
+      </div>
+      <div class="tip-body">
+        <span class="tip-tag" id="homeTipTag">11~12월</span>
+        <h3 class="tip-title" id="homeTipTitle"></h3>
+        <p class="tip-desc" id="homeTipDesc"></p>
+      </div>
+      <div class="tip-foot">
+        <div class="tip-dots" id="homeTipDots" aria-hidden="true"></div>
+        <div class="tip-nav">
+          <button type="button" class="tip-arrow" id="homeTipPrev" aria-label="이전 절세 팁">‹</button>
+          <button type="button" class="tip-arrow" id="homeTipNext" aria-label="다음 절세 팁">›</button>
+        </div>
+      </div>
     </div>
 
     <div class="card" style="margin-top:12px">
@@ -2166,6 +2212,35 @@
   /* =========================================================
      렌더: 홈
   ========================================================= */
+  /* ---------- 홈: 오늘의 절세 팁 ---------- */
+  var TAX_TIPS = [
+    { tag: '11~12월', title: '12월까지 체크카드·현금영수증 위주',
+      desc: '올해 사용 문턱(946만 원)은 이미 넘기셨으니, 남은 기간은 공제율 2배(30%)인 체크카드·현금영수증이 유리해요.' },
+    { tag: '12월 31일까지', title: '고향사랑기부제 10만 원',
+      desc: '거주지 외 지자체에 10만 원 기부하면 전액 세액공제 + 3만 원 답례품 혜택을 받아요.' },
+    { tag: '노후 준비', title: '중개형 ISA로 미국 ETF 담기',
+      desc: '국내상장 미국 ETF는 일반 계좌 대신 서민형 ISA로 사면 수익·배당 400만 원까지 비과세예요.' }
+  ];
+  var taxTipIdx = null;
+  function taxTipStartIdx() { return nowD.getMonth() >= 9 ? 0 : 1; }  // 10~12월엔 체크카드·현금영수증 팁부터
+  function renderTaxTip() {
+    if (taxTipIdx == null) taxTipIdx = taxTipStartIdx();
+    if (!(taxTipIdx >= 0 && taxTipIdx < TAX_TIPS.length)) taxTipIdx = 0;
+    var t = TAX_TIPS[taxTipIdx];
+    $('homeTipTag').textContent = t.tag;
+    $('homeTipTitle').textContent = t.title;
+    $('homeTipDesc').textContent = t.desc;
+    $('homeTipCount').textContent = (taxTipIdx + 1) + ' / ' + TAX_TIPS.length;
+    $('homeTipDots').innerHTML = TAX_TIPS.map(function (_, i) {
+      return '<i class="tip-dot' + (i === taxTipIdx ? ' on' : '') + '"></i>';
+    }).join('');
+  }
+  function stepTaxTip(d) {
+    var cur = (taxTipIdx == null) ? taxTipStartIdx() : taxTipIdx;
+    taxTipIdx = (cur + d + TAX_TIPS.length) % TAX_TIPS.length;
+    renderTaxTip();
+  }
+
   function renderHome() {
     var t = assetTotals();
     var shown = ui.showMoney;   // 기본 숨김은 맨 아래 '순자산' 숫자에만 적용
@@ -2236,6 +2311,9 @@
     $('homeRecent').querySelectorAll('.hrow[data-eid]').forEach(function (b) {
       b.addEventListener('click', function () { openEntry(this.getAttribute('data-eid')); });
     });
+
+    // 오늘의 절세 팁 — 매일 홈에서 바로 보이도록 (닫기 없음)
+    renderTaxTip();
 
     // 맨 아래 참고 링크 (순자산 숫자는 탭하면 보임)
     var footNet = $('homeFootNet');
@@ -5117,6 +5195,9 @@
     $('homeRecentMore').addEventListener('click', function () { goTab('book', 'items'); });
     $('homeBudgetCard').addEventListener('click', function () { goTab('book', 'analysis'); });
     $('homeTopMore').addEventListener('click', function () { ui.tab = 'book'; ui.bookView = 'analysis'; saveUi(); render(); });
+    // 오늘의 절세 팁 넘기기
+    $('homeTipPrev').addEventListener('click', function () { stepTaxTip(-1); });
+    $('homeTipNext').addEventListener('click', function () { stepTaxTip(1); });
 
     // 자산
     $('snapBtn').addEventListener('click', function () {
