@@ -1402,6 +1402,11 @@
       <div class="sync-row">
         <input class="input" id="sheetId" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="스프레드시트 ID">
       </div>
+      <label class="field-label" for="loginHint" style="margin-top:12px">로그인 계정 (선택)</label>
+      <div class="sync-row">
+        <input class="input" id="loginHint" type="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="eblovekk@gmail.com">
+      </div>
+      <p class="fine" style="margin-top:6px">로그인 팝업에서 이 계정을 먼저 보여 줘서 계정 선택 화면을 줄여요. 비워 두면 기본 계정을 써요.</p>
       <div class="sync-btns">
         <button class="btn primary" id="googleLoginBtn" type="button" style="flex:1 1 100%">Google로 로그인 및 시트 동기화</button>
         <button class="btn" id="googleRefreshBtn" type="button" style="flex:1" hidden>새로고침</button>
@@ -3746,6 +3751,9 @@
   var SHEET_ID_KEY = 'household_book_sheet_id_v1';
   var OAUTH_TOKEN_KEY = 'household_book_oauth_token_v1';
   var EVER_CONNECTED_KEY = 'household_book_ever_connected_v1';
+  var LOGIN_HINT_KEY = 'household_book_oauth_email_v1';
+  var DEFAULT_LOGIN_HINT = 'eblovekk@gmail.com';
+  var AUTH_LOCK_MS = 180000;   // 로그인 팝업 중복 요청 방지 lock 유지 시간
   var LEGACY_SYNC_URL_KEY = 'household_book_sync_url_v1';
   var SHEETS_SCOPE = 'https://www.googleapis.com/auth/spreadsheets';
   var SHEETS_API = 'https://sheets.googleapis.com/v4/spreadsheets/';
@@ -3756,6 +3764,7 @@
   var sync = {
     clientId: '', sheetId: '',
     token: '', tokenExpiresAt: 0, everConnected: false,
+    loginHint: '', authPendingAt: 0,
     busy: false, loggingIn: false, needLogin: false, authToastShown: false,
     lastError: '', lastSync: 0,
     queue: [],
@@ -3791,6 +3800,9 @@
       sync.queue = Array.isArray(q) ? q.filter(function (o) { return o && o.action; }) : [];
     } catch (e) { sync.queue = []; }
     try { sync.everConnected = window.localStorage.getItem(EVER_CONNECTED_KEY) === '1'; } catch (e) { sync.everConnected = false; }
+    try {
+      sync.loginHint = syncTrim(window.localStorage.getItem(LOGIN_HINT_KEY)) || DEFAULT_LOGIN_HINT;
+    } catch (e) { sync.loginHint = DEFAULT_LOGIN_HINT; }
     try { window.localStorage.removeItem(LEGACY_SYNC_URL_KEY); } catch (e) {}
     sync.needLogin = !syncHasToken();
   }
@@ -3811,6 +3823,26 @@
       else window.localStorage.removeItem(SHEET_ID_KEY);
     } catch (e) {}
   }
+  /* 로그인 팝업에서 먼저 보여 줄 계정(login_hint). 저장해 두고 다음 로그인 때 그대로 쓴다. */
+  function syncSaveLoginHint(v) {
+    sync.loginHint = syncTrim(v);
+    try {
+      if (sync.loginHint) window.localStorage.setItem(LOGIN_HINT_KEY, sync.loginHint);
+      else window.localStorage.removeItem(LOGIN_HINT_KEY);
+    } catch (e) {}
+  }
+  function syncLoginHint() { return sync.loginHint || DEFAULT_LOGIN_HINT; }
+  /* 로그인·조용한 갱신 요청에 공통으로 넣는 옵션 (login_hint) */
+  function syncRequestOpts(extra) {
+    var o = {};
+    var hint = syncLoginHint();
+    if (hint) o.login_hint = hint;
+    if (extra) for (var k in extra) { if (Object.prototype.hasOwnProperty.call(extra, k)) o[k] = extra[k]; }
+    return o;
+  }
+  /* 이미 열린 로그인 팝업이 있으면 같은 팝업을 또 띄우지 않는다 */
+  function syncAuthBusy() { return !!(sync.authPendingAt && (Date.now() - sync.authPendingAt) < AUTH_LOCK_MS); }
+  function syncAuthLock(on) { sync.authPendingAt = on ? Date.now() : 0; }
   function syncSaveToken(resp) {
     sync.token = String(resp.access_token || '');
     var ttl = Number(resp.expires_in) || 3600;
@@ -3853,6 +3885,8 @@
     if (syncHasToken()) return Promise.resolve(true);
     if (!syncReady()) return Promise.resolve(false);
     if (syncSilentPromise) return syncSilentPromise;
+    // 로그인 팝업이 이미 열려 있으면 조용한 갱신 창을 또 띄우지 않는다
+    if (syncAuthBusy()) return Promise.resolve(false);
     // 한 번도 연결한 적이 없으면 조용한 갱신으로 될 수 없으니(동의 필요) 시도하지 않는다
     if (!sync.everConnected) return Promise.resolve(false);
     // 실패한 직후 연속 시도(팝업 반복 요청) 방지 — 15초 안에는 다시 시도하지 않는다
@@ -3889,7 +3923,7 @@
           });
           syncSilentClientId = sync.clientId;
         }
-        syncSilentClient.requestAccessToken({ prompt: 'none' });
+        syncSilentClient.requestAccessToken(syncRequestOpts({ prompt: 'none' }));
       } catch (e) { finish(false); }
     });
     return syncSilentPromise;
@@ -3926,6 +3960,10 @@
       if (!opts.silent) { showToast('스프레드시트 ID를 넣어 주세요'); openSettings(); }
       return false;
     }
+    if (syncAuthBusy()) {
+      if (!opts.silent) showToast('로그인 창이 이미 열려 있어요 · 그 창에서 계속해 주세요');
+      return false;
+    }
     var client;
     try { client = syncInitTokenClient(); }
     catch (err) {
@@ -3936,10 +3974,13 @@
     sync.loggingIn = true;
     sync.lastError = '';
     renderSyncStatus();
-    try { client.requestAccessToken({}); }
+    // login_hint: 이미 연결한 계정을 먼저 보여 줘서 매번 계정 선택 화면이 뜨는 일을 줄인다
+    syncAuthLock(true);
+    try { client.requestAccessToken(syncRequestOpts()); }
     catch (err) {
       sync.busy = false;
       sync.loggingIn = false;
+      syncAuthLock(false);
       renderSyncStatus();
       if (!opts.silent) showToast('Google 로그인 창을 열지 못했어요 · 팝업 차단을 확인해 주세요');
       return false;
@@ -3959,6 +4000,7 @@
     var msg = syncOAuthErrorText(err);
     sync.busy = false;
     sync.loggingIn = false;
+    syncAuthLock(false);
     if (!syncIsCancel(msg)) sync.lastError = msg;
     renderSyncStatus();
     showToast('Google 로그인에 실패했어요 · ' + msg);
@@ -3966,6 +4008,7 @@
   function syncOnToken(resp) {
     sync.busy = false;
     sync.loggingIn = false;
+    syncAuthLock(false);
     if (!resp || resp.error || !resp.access_token) {
       syncHandleLoginFailure(resp);
       return;
@@ -3982,6 +4025,7 @@
   }
   function syncOnTokenError(err) {
     sync.busy = false;
+    syncAuthLock(false);
     syncHandleLoginFailure(err);
   }
   function syncLogoutAsk() {
@@ -4749,6 +4793,8 @@
     if (cid && document.activeElement !== cid) cid.value = sync.clientId;
     var sid = $('sheetId');
     if (sid && document.activeElement !== sid) sid.value = sync.sheetId;
+    var hintInp = $('loginHint');
+    if (hintInp && document.activeElement !== hintInp) hintInp.value = sync.loginHint || DEFAULT_LOGIN_HINT;
     var note = $('storageNote');
     if (note && storageOK) {
       note.textContent = syncHasToken()
@@ -5021,9 +5067,20 @@
         if (syncHasToken()) syncNow({ silent: false }); else syncLogin();
       });
     }
+    var hintField = $('loginHint');
+    if (hintField) {
+      hintField.addEventListener('change', function () { syncSaveLoginHint(hintField.value); renderSyncStatus(); });
+      hintField.addEventListener('keydown', function (ev) {
+        if (ev.key !== 'Enter') return;
+        ev.preventDefault();
+        syncSaveLoginHint(hintField.value);
+        if (syncHasToken()) syncNow({ silent: false }); else syncLogin();
+      });
+    }
     if ($('googleLoginBtn')) $('googleLoginBtn').addEventListener('click', function () {
       if ($('oauthClientId')) syncSaveClientId($('oauthClientId').value);
       if ($('sheetId')) syncSaveSheetId($('sheetId').value);
+      if ($('loginHint')) syncSaveLoginHint($('loginHint').value);
       if (!sync.clientId) { showToast('Google Client ID를 넣어 주세요'); return; }
       if (syncHasToken()) { syncNow({ silent: false }); return; }
       syncLogin();
@@ -5423,6 +5480,7 @@
     syncSaveQueue: syncSaveQueue,
     syncLogin: syncLogin, syncLogoutAsk: syncLogoutAsk, syncSheetRead: syncSheetRead, syncHasToken: syncHasToken,
     syncEnsureToken: syncEnsureToken, syncStateName: syncStateName,
+    syncSaveLoginHint: syncSaveLoginHint, syncLoginHint: syncLoginHint, syncAuthBusy: syncAuthBusy,
     renderSyncStatus: renderSyncStatus, render: render,
     saveEntry: saveEntry, deleteEntry: deleteEntry, openBudgetModal: openBudgetModal, saveBudgetModal: saveBudgetModal,
     openAsset: openAsset, saveAsset: saveAsset, openWedding: openWedding, saveWedding: saveWedding,

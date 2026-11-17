@@ -27,7 +27,7 @@
 | Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
 | 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
 | 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
-| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v19'` |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v20'` |
 
 ---
 
@@ -91,7 +91,7 @@
 2. **[Google로 로그인 및 시트 동기화]** → `eblovekk@gmail.com` 선택 → 권한 승인(스프레드시트 편집) → 자동으로 시트와 맞춰집니다.
 3. 이후에는 앱 제목 아래 **시트 상태줄**을 누르면 언제든 다시 맞출 수 있습니다.
 
-**시트 상태줄 (v19)** — 헤더 바로 아래 한 줄로, 지금 기록이 어디까지 저장됐는지 보여 줍니다. 누르면 그 자리에서 다시 연결·동기화합니다.
+**시트 상태줄 (v19, v20)** — 헤더 바로 아래 한 줄로, 지금 기록이 어디까지 저장됐는지 보여 줍니다. 누르면 그 자리에서 다시 연결·동기화합니다.
 
 | 상태줄 | 뜻 | 누르면 |
 | --- | --- | --- |
@@ -120,6 +120,7 @@
 - 오프라인이거나 실패한 변경은 `localStorage` 큐에 쌓였다가 15초 간격·재접속·다음 로그인 때 순서대로 올라갑니다.
 - **액세스 토큰(1시간)이 만료되면 팝업 없이 조용한 자동 갱신을 먼저 시도합니다(v19)** — 시트 읽기·쓰기 전에 `requestAccessToken({ prompt: 'none' })`을 1회(타임아웃 4초) 보내고, 성공하면 팝업 없이 그대로 읽고 씁니다. 앱을 열 때·다시 탭으로 돌아올 때·기록을 저장할 때 모두 이 경로를 탑니다.
 - 조용한 갱신이 실패하면(동의 필요·팝업 차단·쿠키 차단·타임아웃) 조용히 포기하고 상태줄을 `폰에 저장됨 · 시트 대기 N건` / `연결 만료 · 탭해서 재연결`로 바꿉니다. 이때만 사용자가 상태줄을 눌렀을 때 로그인 팝업이 뜹니다. 실패 직후 15초 안에는 조용한 갱신을 다시 시도하지 않습니다(팝업 연타 방지).
+- **로그인 팝업은 계정 선택을 줄입니다(v20)** — 로그인·조용한 갱신 요청에 `login_hint`(설정의 `로그인 계정`, 기본 `eblovekk@gmail.com`)를 넣어 이미 연결한 계정을 먼저 보여 줍니다. 로그인 팝업이 이미 떠 있는 동안(3분 lock)에는 팝업을 또 띄우지 않고 `로그인 창이 이미 열려 있어요`라고만 알려 줍니다.
 - `401`이 오면 토큰을 지우고 조용한 갱신 → 성공 시 같은 요청을 한 번 더 보냅니다. 그것도 안 되면 그때 연결 만료로 표시합니다.
 
 ### 1-5. 보안 · 접근 범위
@@ -239,6 +240,7 @@
 | `household_book_sheet_id_v1` | 입력한 스프레드시트 ID |
 | `household_book_oauth_token_v1` | 액세스 토큰 + 만료 시각 (약 1시간) |
 | `household_book_ever_connected_v1` | 한 번이라도 Google 시트에 연결한 적 있음(`'1'`) — 처음 연결과 '연결 만료'를 구분하는 표시 |
+| `household_book_oauth_email_v1` | 로그인 팝업에 먼저 보여 줄 계정(`login_hint`, 기본 `eblovekk@gmail.com`) |
 | `household_book_sync_queue_v1` | 아직 시트에 못 올린 변경 큐 |
 
 ---
@@ -248,7 +250,7 @@
 ```
 index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
 manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
-sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v19`)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v20`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
 icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```
