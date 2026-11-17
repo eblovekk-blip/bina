@@ -257,10 +257,10 @@
     border-radius:12px; background:var(--surface-2); border:1px solid var(--line);
   }
   .fi-row:active{ background:var(--accent-weak); }
-  .fi-row .fi-txt{ flex:1 1 auto; min-width:0; }
-  .fi-row .fi-nm{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .fi-row .fi-sub{ margin-top:2px; font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .fi-row .fi-am{ flex:0 0 auto; font-size:13.5px; font-weight:500; color:var(--ink); }
+  .fi-row .fi-txt{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
+  .fi-row .fi-nm{ display:block; font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fi-row .fi-sub{ display:block; margin-top:3px; font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fi-row .fi-am{ flex:0 0 auto; white-space:nowrap; font-size:13.5px; font-weight:500; color:var(--ink); }
   .fi-addbtn{ width:100%; margin-top:9px; height:44px; }
   .fi-run{ display:flex; flex-direction:column; gap:8px; }
   .fi-pick{
@@ -274,12 +274,13 @@
   }
   .fi-pick.on{ border-color:rgba(236,72,153,.4); background:var(--accent-weak); }
   .fi-pick.on .ck{ background:var(--accent); border-color:var(--accent); color:var(--accent-on); }
-  .fi-pick .pk-txt{ flex:1 1 auto; min-width:0; }
+  .fi-pick .pk-txt{ flex:1 1 auto; min-width:0; display:flex; flex-direction:column; }
   .fi-pick .pk-1{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:13.5px; color:var(--ink); }
   .fi-pick .pk-1 .nm{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .fi-pick .pk-1 b{ font-weight:500; flex:0 0 auto; }
-  .fi-pick .pk-2{ margin-top:3px; font-size:11.5px; color:var(--muted); }
-  .fi-pick .pk-3{ margin-top:3px; font-size:11.5px; color:var(--accent-ink); }
+  .fi-pick .pk-1 b{ font-weight:500; flex:0 0 auto; white-space:nowrap; }
+  .fi-pick .pk-2{ display:block; margin-top:4px; font-size:11.5px; color:var(--muted); }
+  .fi-pick .pk-3{ display:block; margin-top:3px; font-size:11.5px; color:var(--accent-ink); }
+  .fi-pick .pk-3 b{ font-weight:500; }
 
   /* ---------- list ---------- */
   .filters{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
@@ -5097,7 +5098,7 @@
         '<span class="pk-txt">' +
           '<span class="pk-1"><span class="nm">' + esc(it.name) + '</span><b class="num">' + won(it.amount) + '</b></span>' +
           '<span class="pk-2">' + esc(it.category) + ' · ' + esc(it.method) + ' · ' + d.m + '월 ' + d.d + '일</span>' +
-          (hit ? '<span class="pk-3">이미 입력됨 · ' + esc(hit.memo || hit.category) + ' ' + won(hit.amount) + ' (' + Number(hit.date.slice(5, 7)) + '/' + Number(hit.date.slice(8, 10)) + ')</span>' : '') +
+          (hit ? '<span class="pk-3">이미 입력됨 · ' + ((hit.memo && normTxt(hit.memo) !== normTxt(it.name)) ? esc(hit.memo) + ' ' : '') + '<b>' + won(hit.amount) + '</b> (' + Number(hit.date.slice(5, 7)) + '/' + Number(hit.date.slice(8, 10)) + ')</span>' : '') +
         '</span>' +
       '</button>';
     }).join('');
