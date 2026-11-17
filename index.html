@@ -189,6 +189,7 @@
     transition:transform .12s ease, opacity .12s ease, background .12s ease;
   }
   .btn:active{ transform:scale(.97); opacity:.9; }
+  .btn:disabled{ opacity:.4; }
   .btn.primary{ background:var(--accent); color:var(--accent-on); border-color:var(--accent); box-shadow:0 3px 10px -6px rgba(236,72,153,.8); }
   .btn.primary:active{ background:var(--accent-deep); }
   .btn.tint{ background:var(--accent-weak); color:var(--accent-ink); border-color:rgba(236,72,153,.22); }
@@ -237,6 +238,48 @@
   .fv-chip b{ font-weight:500; }
   .fv-group-label{ font-size:12.5px; color:var(--muted); margin:10px 0 7px; }
   .fv-note{ margin-top:14px; font-size:12.5px; color:var(--muted); }
+  /* 고정비 등록·입력 */
+  .fv-fixed{ margin-top:14px; padding-top:14px; border-top:1px solid var(--line); }
+  .fv-fixed-sum{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:13px; color:var(--ink-2); }
+  .fv-fixed-sum b{ font-size:15.5px; font-weight:500; letter-spacing:-.02em; }
+  .fv-fixed-sub{ margin-top:5px; font-size:12.5px; color:var(--muted); line-height:1.55; }
+  .fv-fixed .btn{ width:100%; margin-top:11px; height:44px; }
+  .fi-sum{
+    display:flex; align-items:baseline; justify-content:space-between; gap:10px;
+    padding:12px 14px; border-radius:12px; margin-bottom:10px;
+    background:var(--accent-weak); border:1px solid rgba(236,72,153,.18);
+  }
+  .fi-sum span{ font-size:12.5px; color:var(--accent-ink); }
+  .fi-sum b{ font-size:16px; font-weight:500; letter-spacing:-.02em; color:var(--accent-ink); }
+  .fi-list{ display:flex; flex-direction:column; gap:7px; }
+  .fi-row{
+    display:flex; align-items:center; gap:10px; width:100%; padding:12px 14px; text-align:left;
+    border-radius:12px; background:var(--surface-2); border:1px solid var(--line);
+  }
+  .fi-row:active{ background:var(--accent-weak); }
+  .fi-row .fi-txt{ flex:1 1 auto; min-width:0; }
+  .fi-row .fi-nm{ font-size:13.5px; color:var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fi-row .fi-sub{ margin-top:2px; font-size:11.5px; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fi-row .fi-am{ flex:0 0 auto; font-size:13.5px; font-weight:500; color:var(--ink); }
+  .fi-addbtn{ width:100%; margin-top:9px; height:44px; }
+  .fi-run{ display:flex; flex-direction:column; gap:8px; }
+  .fi-pick{
+    display:flex; align-items:flex-start; gap:10px; width:100%; padding:12px 14px; text-align:left;
+    border-radius:12px; background:var(--surface-2); border:1px solid var(--line);
+  }
+  .fi-pick .ck{
+    flex:0 0 20px; width:20px; height:20px; margin-top:1px; border-radius:50%;
+    display:flex; align-items:center; justify-content:center; font-size:11px; line-height:1;
+    border:1.5px solid var(--line-strong); background:var(--surface); color:transparent;
+  }
+  .fi-pick.on{ border-color:rgba(236,72,153,.4); background:var(--accent-weak); }
+  .fi-pick.on .ck{ background:var(--accent); border-color:var(--accent); color:var(--accent-on); }
+  .fi-pick .pk-txt{ flex:1 1 auto; min-width:0; }
+  .fi-pick .pk-1{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; font-size:13.5px; color:var(--ink); }
+  .fi-pick .pk-1 .nm{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .fi-pick .pk-1 b{ font-weight:500; flex:0 0 auto; }
+  .fi-pick .pk-2{ margin-top:3px; font-size:11.5px; color:var(--muted); }
+  .fi-pick .pk-3{ margin-top:3px; font-size:11.5px; color:var(--accent-ink); }
 
   /* ---------- list ---------- */
   .filters{ display:flex; flex-direction:column; gap:10px; margin-bottom:14px; }
@@ -1098,6 +1141,62 @@
   </div>
 </div>
 
+<!-- 고정비 항목 추가/수정 -->
+<div class="modal" id="fixedItemModal" role="presentation">
+  <div class="backdrop" data-close="fixedItem"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="fixedItemTitle" style="max-width:400px">
+    <div class="sheet-head">
+      <h2 id="fixedItemTitle">고정비 항목</h2>
+      <button class="x-btn" data-close="fixedItem" aria-label="닫기">✕</button>
+    </div>
+    <div class="fields">
+      <div>
+        <label class="field-label" for="fiName">이름</label>
+        <input class="input" id="fiName" type="text" maxlength="30" autocomplete="off" placeholder="예: 코웨이">
+      </div>
+      <div>
+        <label class="field-label" for="fiAmount">월 금액</label>
+        <input class="input num" id="fiAmount" type="text" inputmode="numeric" autocomplete="off" placeholder="예: 18,900" style="text-align:right">
+      </div>
+      <div class="two-col">
+        <div>
+          <label class="field-label" for="fiCat">카테고리</label>
+          <select class="input" id="fiCat"></select>
+        </div>
+        <div>
+          <label class="field-label" for="fiDay">결제일</label>
+          <select class="input" id="fiDay"></select>
+        </div>
+      </div>
+      <div>
+        <label class="field-label" for="fiMethod">결제수단</label>
+        <select class="input" id="fiMethod"></select>
+      </div>
+    </div>
+    <div class="sheet-actions">
+      <button class="btn del" id="fiDelete" type="button" hidden>삭제</button>
+      <button class="btn primary" id="fiSave" type="button">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 이번 달 고정비 입력 -->
+<div class="modal" id="fixedRunModal" role="presentation">
+  <div class="backdrop" data-close="fixedRun"></div>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="fixedRunTitle" style="max-width:400px">
+    <div class="sheet-head">
+      <h2 id="fixedRunTitle">이번 달 고정비 입력</h2>
+      <button class="x-btn" data-close="fixedRun" aria-label="닫기">✕</button>
+    </div>
+    <p class="fine" id="fixedRunNote" style="margin-top:0">넣을 항목만 눌러 주세요. 이미 입력된 항목은 기본으로 빠져 있어요.</p>
+    <div class="fi-run" id="fixedRunList"></div>
+    <div class="sheet-actions">
+      <button class="btn" id="fixedRunCancel" type="button">취소</button>
+      <button class="btn primary" id="fixedRunApply" type="button">입력</button>
+    </div>
+  </div>
+</div>
+
 <!-- 자산 추가/수정 -->
 <div class="modal" id="assetModal" role="presentation">
   <div class="backdrop" data-close="asset"></div>
@@ -1244,6 +1343,14 @@
       <div class="mini-chips" id="fixedCatChips"></div>
     </div>
 
+    <div class="set-group">
+      <h3>월 정기 고정비</h3>
+      <p class="fine" style="margin-top:0">매달 나가는 고정비를 항목별로 적어 두면 '분석' 탭에서 이번 달 내역으로 한 번에 넣을 수 있어요.</p>
+      <div class="fi-sum"><span>월 고정비 합계</span><b class="num" id="fiTotal">0원</b></div>
+      <div class="fi-list" id="fixedItemList"></div>
+      <button class="btn fi-addbtn" id="fixedItemAdd" type="button">＋ 고정비 항목 추가</button>
+    </div>
+
     <div class="set-group" id="setCardGoals">
       <h3>카드별 실적 설정</h3>
       <p class="fine" style="margin-top:0">카드와 월 목표 실적을 정하면 '분석' 탭에 게이지로 보여요. 목표를 비우면 사용액만 보여요.</p>
@@ -1332,6 +1439,7 @@
   var STORAGE_KEY = 'household_book_v1';
   var SYNC_QUEUE_KEY = 'household_book_sync_queue_v1';
   var FIXED_CATS_KEY = 'household_book_fixed_cats_v1';
+  var FIXED_ITEMS_KEY = 'household_book_fixed_items_v1';
   var CARDS_KEY = 'household_book_cards_v1';
   var UI_KEY = 'household_book_ui_v1';
 
@@ -1407,7 +1515,19 @@
   var itemFilter = { cat: 'all', method: 'all', q: '' };
   var editingId = null;
   var form = { type: 'expense', category: '식비', method: '카드' };
+  /* 고정비 카테고리 설정 */
   var fixedCats = { '주거/통신': 1 };
+  /* 월 정기 고정비 항목 — 뱅크샐러드 1년치(2025-11~2026-11)에서 확인된 매달 반복 지출 4건.
+     keys는 이미 입력된 내역을 찾을 때 쓰는 메모 검색어(기본 항목만 실제 메모 형태에 맞춰 둠). */
+  var DEFAULT_FIXED_ITEMS = [
+    { id: 'fx-kyobo', name: '교보생명 실손보험',  amount: 35445, category: '의료/건강', method: '이체',              day: 25, keys: ['교보'] },
+    { id: 'fx-coway', name: '코웨이',           amount: 18900, category: '주거/통신', method: '네이버 현대카드',     day: 20, keys: ['코웨이'] },
+    { id: 'fx-lgu',   name: 'LG U+ 통신비',      amount: 8800,  category: '주거/통신', method: '우리 K-패스',        day: 10, keys: ['u+', '유플러스'] },
+    { id: 'fx-naver', name: '네이버플러스 멤버십', amount: 4900,  category: '여가/문화', method: '네이버페이 간편결제', day: 9,  keys: ['네이버플러스'] }
+  ];
+  var fixedItems = [];
+  var fixedRunSel = {};          // '이번 달 고정비 입력' 시트에서 체크된 항목 id
+  var editingFixedItemId = null;
   var storageOK = true;
   var storage;
 
@@ -1540,6 +1660,7 @@
         }
       }
       loadCardGoals();
+      loadFixedItems();
     } catch (e) {}
   }
   function saveUi() {
@@ -1568,6 +1689,89 @@
   }
   function saveCardGoals() {
     try { window.localStorage.setItem(CARDS_KEY, JSON.stringify(cardGoals)); } catch (e) {}
+  }
+  /* 월 정기 고정비 항목 저장·불러오기 */
+  function normTxt(s) { return String(s == null ? '' : s).toLowerCase().replace(/\s+/g, ''); }
+  function autoFixedKeys(name) {
+    var out = [];
+    var push = function (k) { k = normTxt(k); if (k.length >= 2 && out.indexOf(k) < 0) out.push(k); };
+    push(name);
+    String(name == null ? '' : name).split(/[^0-9A-Za-z가-힣+]+/).forEach(function (t) { push(t); });
+    return out;
+  }
+  function normalizeFixedItem(x) {
+    if (!x || typeof x !== 'object') return null;
+    var name = String(x.name == null ? '' : x.name).trim().slice(0, 30);
+    if (!name) return null;
+    var amount = Math.round(Number(x.amount));
+    if (!isFinite(amount) || amount <= 0) return null;
+    var cat = String(x.category == null ? '' : x.category).trim();
+    var ok = false;
+    for (var i = 0; i < EXPENSE_CATS.length; i++) if (EXPENSE_CATS[i].name === cat) { ok = true; break; }
+    if (!ok) cat = '기타';
+    var day = Math.round(Number(x.day));
+    if (!isFinite(day) || day < 1 || day > 31) day = 1;
+    var keys = [];
+    if (Array.isArray(x.keys)) {
+      x.keys.forEach(function (k) {
+        k = normTxt(k);
+        if (k.length >= 2 && keys.indexOf(k) < 0) keys.push(k);
+      });
+    }
+    if (!keys.length) keys = autoFixedKeys(name);
+    return {
+      id: String(x.id || uid()),
+      name: name,
+      amount: amount,
+      category: cat,
+      method: String(x.method == null ? '' : x.method).trim().slice(0, 20) || '카드',
+      day: day,
+      keys: keys
+    };
+  }
+  function loadFixedItems() {
+    var raw = null;
+    try { raw = window.localStorage.getItem(FIXED_ITEMS_KEY); } catch (e) { raw = null; }
+    if (raw == null) {                    // 아직 저장 전이면 기본 4건을 그대로 쓴다
+      fixedItems = DEFAULT_FIXED_ITEMS.map(function (x) { return normalizeFixedItem(x); });
+      return;
+    }
+    var arr = [];
+    try { arr = JSON.parse(raw); } catch (e) { arr = []; }
+    if (!Array.isArray(arr)) arr = [];
+    var out = [], seen = {};
+    arr.forEach(function (x) {
+      var n = normalizeFixedItem(x);
+      if (!n || seen[n.id]) return;
+      seen[n.id] = 1;
+      out.push(n);
+    });
+    fixedItems = out;
+  }
+  function saveFixedItems() {
+    try { window.localStorage.setItem(FIXED_ITEMS_KEY, JSON.stringify(fixedItems)); } catch (e) {}
+  }
+  function fixedItemsTotal() {
+    var t = 0;
+    fixedItems.forEach(function (it) { t += it.amount; });
+    return t;
+  }
+  /* 이번 달 내역에 이미 들어있는 고정비 찾기 (메모에 검색어가 있으면 입력된 것으로 본다) */
+  function fixedItemHit(item, list) {
+    var keys = (item.keys && item.keys.length) ? item.keys : autoFixedKeys(item.name);
+    for (var i = 0; i < list.length; i++) {
+      var e = list[i];
+      if (e.type !== 'expense') continue;
+      var memo = normTxt(e.memo);
+      if (memo) {
+        for (var j = 0; j < keys.length; j++) {
+          if (keys[j] && memo.indexOf(keys[j]) >= 0) return e;
+        }
+      } else if (e.category === item.category && e.amount === item.amount) {
+        return e;                        // 메모가 없으면 같은 분류·같은 금액이면 입력된 것으로 본다
+      }
+    }
+    return null;
   }
   /* 결제수단 칩 목록: 기본 4개 + 설정에 등록한 카드 + 이미 기록에 쓰인 결제수단(예전 시트 값도 깨지지 않게) */
   function methodList() {
@@ -2427,33 +2631,65 @@
   ========================================================= */
   function renderFixedVariable(list) {
     var fixed = 0, variable = 0;
-    var fixedItems = [], varItems = [];
+    var fixedItemsSum = 0, pendingCount = 0, pendingAmount = 0;
+    var fixedListArr = [], varItems = [];
     var cats = byCategory(list);
     cats.forEach(function (c) {
-      if (fixedCats[c.name]) { fixed += c.value; fixedItems.push(c); }
+      if (fixedCats[c.name]) { fixed += c.value; fixedListArr.push(c); }
       else { variable += c.value; varItems.push(c); }
     });
     var total = fixed + variable;
     $('fvHint').textContent = total ? '지출 ' + won(total) : '';
     var body = $('fvBody');
-    if (!total) {
+
+    /* 등록한 월 정기 고정비 — 합계와 이번 달 미입력 항목 안내 */
+    fixedItems.forEach(function (it) {
+      fixedItemsSum += it.amount;
+      if (!fixedItemHit(it, list)) { pendingCount++; pendingAmount += it.amount; }
+    });
+    var fixedBlock =
+      '<div class="fv-fixed">' +
+        '<div class="fv-fixed-sum"><span>등록 고정비</span><b class="num">' + won(fixedItemsSum) + '</b></div>' +
+        '<div class="fv-fixed-sub">' +
+          (fixedItems.length
+            ? (pendingCount
+                ? '이번 달 아직 입력 안 된 고정비 ' + pendingCount + '건 · ' + won(pendingAmount)
+                : '이번 달 고정비 ' + fixedItems.length + '건을 모두 입력했어요')
+            : '설정에서 매달 나가는 고정비를 등록해 두면 한 번에 입력할 수 있어요') +
+        '</div>' +
+        (fixedItems.length
+          ? '<button class="btn primary" type="button" data-fixed-run="1">' + (pendingCount ? '이번 달 고정비 입력' : '이번 달 고정비 다시 입력') + '</button>'
+          : '<button class="btn" type="button" data-fixed-set="1">고정비 항목 설정</button>') +
+      '</div>';
+
+    if (!total && !fixedItems.length) {
       body.innerHTML = '<p class="fine" style="margin:0">지출을 기록하면 고정비와 변동비로 나눠 보여 드려요.</p>';
       return;
     }
-    var fPct = Math.round(fixed / total * 100);
-    var vPct = 100 - fPct;
+    var fPct = total ? Math.round(fixed / total * 100) : 0;
+    var vPct = total ? 100 - fPct : 0;
     var chips = function (arr) {
       return arr.length ? '<div class="fv-chips">' + arr.map(function (c) {
         return '<span class="fv-chip">' + esc(c.name) + ' <b class="num">' + shortMoney(c.value) + '</b></span>';
       }).join('') + '</div>' : '<p class="fine" style="margin:4px 0">해당 항목 없음</p>';
     };
     body.innerHTML =
-      '<div class="fv-sum"><span>고정비 <b class="num">' + shortMoney(fixed) + ' (' + fPct + '%)</b></span>' +
-      '<span>변동비 <b class="num">' + shortMoney(variable) + ' (' + vPct + '%)</b></span></div>' +
-      '<div class="fv-bar"><div class="f" style="width:' + fPct + '%"></div><div class="v" style="width:' + vPct + '%"></div></div>' +
-      '<div class="fv-group-label">변동비 항목</div>' + chips(varItems) +
-      '<div class="fv-group-label">고정비 항목</div>' + chips(fixedItems) +
-      '<p class="fv-note">고정비 항목은 설정에서 바꿀 수 있어요.</p>';
+      (total ?
+        '<div class="fv-sum"><span>고정비 <b class="num">' + shortMoney(fixed) + ' (' + fPct + '%)</b></span>' +
+        '<span>변동비 <b class="num">' + shortMoney(variable) + ' (' + vPct + '%)</b></span></div>' +
+        '<div class="fv-bar"><div class="f" style="width:' + fPct + '%"></div><div class="v" style="width:' + vPct + '%"></div></div>' +
+        '<div class="fv-group-label">변동비 항목</div>' + chips(varItems) +
+        '<div class="fv-group-label">고정비 항목</div>' + chips(fixedListArr) +
+        '<p class="fv-note">고정비 항목은 설정에서 바꿀 수 있어요.</p>'
+        : '<p class="fine" style="margin:0 0 2px">이번 달 지출 기록이 아직 없어요.</p>') +
+      fixedBlock;
+
+    body.querySelectorAll('[data-fixed-run]').forEach(function (b) {
+      b.addEventListener('click', openFixedRun);
+    });
+    body.querySelectorAll('[data-fixed-set]').forEach(function (b) {
+      b.addEventListener('click', function () { openSettings(); });
+    });
   }
 
   /* =========================================================
@@ -2887,14 +3123,14 @@
     var el = $(id);
     el.classList.remove('open');
     var stillOpen = false;
-    ['entryModal', 'settingsModal', 'confirmModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal'].forEach(function (m) {
+    ['entryModal', 'settingsModal', 'confirmModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal', 'fixedItemModal', 'fixedRunModal'].forEach(function (m) {
       var node = $(m);
       if (node && node.classList.contains('open')) stillOpen = true;
     });
     document.body.style.overflow = stillOpen ? 'hidden' : '';
   }
   function closeAll() {
-    ['entryModal', 'settingsModal', 'confirmModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal'].forEach(function (id) {
+    ['entryModal', 'settingsModal', 'confirmModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal', 'fixedItemModal', 'fixedRunModal'].forEach(function (id) {
       var el = $(id);
       if (el && el.classList.contains('open')) el.classList.remove('open');
     });
@@ -3325,7 +3561,8 @@
       entries: state.entries.slice().sort(function (a, b) { return a.date < b.date ? -1 : 1; }),
       assets: state.assets,
       wedding: state.wedding,
-      fixedCats: Object.keys(fixedCats)
+      fixedCats: Object.keys(fixedCats),
+      fixedItems: fixedItems
     };
     var name = '가계부_' + todayStr() + '.json';
     if (download(name, JSON.stringify(payload, null, 2), 'application/json;charset=utf-8')) {
@@ -3360,6 +3597,16 @@
       fixedCats = {};
       obj.fixedCats.forEach(function (n) { if (typeof n === 'string') fixedCats[n] = 1; });
       saveFixedCats();
+    }
+    if (Array.isArray(obj.fixedItems)) {
+      var fitems = [];
+      obj.fixedItems.forEach(function (x) {
+        var n = normalizeFixedItem(x);
+        if (n) fitems.push(n);
+      });
+      fixedItems = fitems;
+      saveFixedItems();
+      renderFixedItemSettings();
     }
     var exist = {};
     state.entries.forEach(function (e) { exist[e.id] = 1; });
@@ -4434,6 +4681,8 @@
         else if (which === 'wedding') { closeModal('weddingModal'); ui.editingWeddingId = null; }
         else if (which === 'assetAdd') closeModal('assetAddModal');
         else if (which === 'balance') closeModal('balanceModal');
+        else if (which === 'fixedItem') { closeModal('fixedItemModal'); editingFixedItemId = null; }
+        else if (which === 'fixedRun') closeModal('fixedRunModal');
       });
     }
 
@@ -4562,6 +4811,21 @@
     // 고정비 카테고리 설정
     renderFixedCatChips();
 
+    // 월 정기 고정비 항목
+    renderFixedItemSettings();
+    $('fixedItemAdd').addEventListener('click', function () { openFixedItem(null); });
+    $('fiSave').addEventListener('click', saveFixedItem);
+    $('fiDelete').addEventListener('click', deleteFixedItem);
+    $('fiAmount').addEventListener('input', function () { this.value = groupDigits(this.value); });
+    $('fiName').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); saveFixedItem(); }
+    });
+    $('fiAmount').addEventListener('keydown', function (ev) {
+      if (ev.key === 'Enter') { ev.preventDefault(); saveFixedItem(); }
+    });
+    $('fixedRunCancel').addEventListener('click', function () { closeModal('fixedRunModal'); });
+    $('fixedRunApply').addEventListener('click', applyFixedRun);
+
     // 설정
     $('openBudgetModal').addEventListener('click', function () { closeModal('settingsModal'); openBudgetModal(); });
 
@@ -4654,7 +4918,7 @@
     // 키보드
     document.addEventListener('keydown', function (ev) {
       if (ev.key === 'Escape') {
-        var modals = ['confirmModal', 'entryModal', 'settingsModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal'];
+        var modals = ['confirmModal', 'entryModal', 'settingsModal', 'budgetModal', 'assetModal', 'weddingModal', 'assetAddModal', 'balanceModal', 'fixedItemModal', 'fixedRunModal'];
         for (var mi = 0; mi < modals.length; mi++) {
           if ($(modals[mi]).classList.contains('open')) {
             if (modals[mi] === 'confirmModal') answerConfirm(false);
@@ -4701,6 +4965,197 @@
       });
     });
   }
+  /* =========================================================
+     고정비 항목 — 설정 · 이번 달 입력
+  ========================================================= */
+  function dayLabel(day) { return '매월 ' + day + '일'; }
+  function renderFixedItemSettings() {
+    var wrap = $('fixedItemList');
+    if (!wrap) return;
+    var totalEl = $('fiTotal');
+    if (totalEl) totalEl.textContent = won(fixedItemsTotal());
+    if (!fixedItems.length) {
+      wrap.innerHTML = '<p class="fine" style="margin:0">등록된 고정비가 없어요.</p>';
+      return;
+    }
+    wrap.innerHTML = fixedItems.map(function (it) {
+      return '<button class="fi-row" type="button" data-fi="' + esc(it.id) + '">' +
+        '<span class="fi-txt">' +
+          '<span class="fi-nm">' + esc(it.name) + '</span>' +
+          '<span class="fi-sub">' + esc(it.category) + ' · ' + esc(it.method) + ' · ' + dayLabel(it.day) + '</span>' +
+        '</span>' +
+        '<span class="fi-am num">' + won(it.amount) + '</span>' +
+      '</button>';
+    }).join('');
+    wrap.querySelectorAll('[data-fi]').forEach(function (b) {
+      b.addEventListener('click', function () { openFixedItem(this.getAttribute('data-fi')); });
+    });
+  }
+  function openFixedItem(id) {
+    var catSel = $('fiCat'), daySel = $('fiDay'), mSel = $('fiMethod');
+    if (!catSel.options.length) {
+      catSel.innerHTML = EXPENSE_CATS.map(function (c) {
+        return '<option value="' + esc(c.name) + '">' + c.emoji + ' ' + esc(c.name) + '</option>';
+      }).join('');
+      var days = [];
+      for (var d = 1; d <= 31; d++) days.push('<option value="' + d + '">' + d + '일</option>');
+      daySel.innerHTML = days.join('');
+    }
+    mSel.innerHTML = methodList().map(function (m) {
+      return '<option value="' + esc(m) + '">' + esc(m) + '</option>';
+    }).join('');
+    var it = null;
+    if (id) {
+      for (var i = 0; i < fixedItems.length; i++) if (fixedItems[i].id === id) it = fixedItems[i];
+    }
+    editingFixedItemId = it ? it.id : null;
+    $('fixedItemTitle').textContent = it ? '고정비 항목 수정' : '고정비 항목 추가';
+    $('fiName').value = it ? it.name : '';
+    $('fiAmount').value = it ? fmtNum(it.amount) : '';
+    catSel.value = it ? it.category : '주거/통신';
+    mSel.value = it ? it.method : '카드';
+    if (mSel.value !== (it ? it.method : '카드')) {
+      // 목록에 없는 결제수단(예전 값)이면 그대로 한 줄 더해 준다
+      var opt = document.createElement('option');
+      opt.value = it.method; opt.textContent = it.method;
+      mSel.appendChild(opt);
+      mSel.value = it.method;
+    }
+    daySel.value = String(it ? it.day : 1);
+    $('fiDelete').hidden = !it;
+    openModal('fixedItemModal');
+  }
+  function saveFixedItem() {
+    var name = String($('fiName').value || '').trim().slice(0, 30);
+    if (!name) { showToast('이름을 입력해 주세요'); try { $('fiName').focus(); } catch (e) {} return; }
+    var amount = Math.round(Number(digits($('fiAmount').value)));
+    if (!amount || amount <= 0) { showToast('금액을 입력해 주세요'); try { $('fiAmount').focus(); } catch (e) {} return; }
+    if (amount > 100000000) { showToast('금액이 너무 커요'); return; }
+    var old = null;
+    for (var i = 0; i < fixedItems.length; i++) if (fixedItems[i].id === editingFixedItemId) old = fixedItems[i];
+    var rec = normalizeFixedItem({
+      id: old ? old.id : uid(),
+      name: name,
+      amount: amount,
+      category: $('fiCat').value,
+      method: $('fiMethod').value,
+      day: Number($('fiDay').value),
+      keys: old && old.name === name ? old.keys : null
+    });
+    if (!rec) { showToast('저장할 수 없는 값이에요'); return; }
+    if (old) {
+      for (var j = 0; j < fixedItems.length; j++) if (fixedItems[j].id === old.id) fixedItems[j] = rec;
+    } else {
+      var dup = false;
+      fixedItems.forEach(function (x) { if (x.name === rec.name) dup = true; });
+      if (dup) { showToast('같은 이름의 고정비가 이미 있어요'); return; }
+      if (fixedItems.length >= 20) { showToast('고정비는 20개까지 등록할 수 있어요'); return; }
+      fixedItems.push(rec);
+    }
+    saveFixedItems();
+    editingFixedItemId = null;
+    closeModal('fixedItemModal');
+    renderFixedItemSettings();
+    render();
+    showToast(name + ' ' + (old ? '수정했어요' : '추가했어요'));
+  }
+  function deleteFixedItem() {
+    var it = null;
+    for (var i = 0; i < fixedItems.length; i++) if (fixedItems[i].id === editingFixedItemId) it = fixedItems[i];
+    if (!it) return;
+    askConfirm('고정비를 삭제할까요?', it.name + ' 항목을 목록에서 지울게요. 이미 가계부에 넣은 기록은 그대로 남아요.', '삭제', true)
+      .then(function (ok) {
+        if (!ok) return;
+        var name = it.name;
+        fixedItems = fixedItems.filter(function (x) { return x.id !== it.id; });
+        saveFixedItems();
+        editingFixedItemId = null;
+        closeModal('fixedItemModal');
+        renderFixedItemSettings();
+        render();
+        showToast(name + '을(를) 삭제했어요');
+      });
+  }
+  /* 이번 달 입력 시트: 미입력 항목은 기본 체크, 이미 입력된 항목은 기본 빠짐 */
+  function fixedRunDate(item, y, m) {
+    var dim = daysInMonth(y, m);
+    var day = Math.min(Math.max(1, item.day), dim);
+    var now = new Date();
+    if (now.getFullYear() === y && now.getMonth() === m) day = Math.min(day, now.getDate());
+    return monthKey(y, m) + '-' + pad(day);
+  }
+  function renderFixedRun(sel) {
+    var list = entriesOfMonth(viewKey());
+    var wrap = $('fixedRunList');
+    var count = 0, sum = 0;
+    wrap.innerHTML = fixedItems.map(function (it) {
+      var hit = fixedItemHit(it, list);
+      if (sel[it.id]) { count++; sum += it.amount; }
+      var d = dateParts(fixedRunDate(it, view.y, view.m));
+      return '<button class="fi-pick' + (sel[it.id] ? ' on' : '') + '" type="button" data-fr="' + esc(it.id) + '" aria-pressed="' + (sel[it.id] ? 'true' : 'false') + '">' +
+        '<span class="ck">✓</span>' +
+        '<span class="pk-txt">' +
+          '<span class="pk-1"><span class="nm">' + esc(it.name) + '</span><b class="num">' + won(it.amount) + '</b></span>' +
+          '<span class="pk-2">' + esc(it.category) + ' · ' + esc(it.method) + ' · ' + d.m + '월 ' + d.d + '일</span>' +
+          (hit ? '<span class="pk-3">이미 입력됨 · ' + esc(hit.memo || hit.category) + ' ' + won(hit.amount) + ' (' + Number(hit.date.slice(5, 7)) + '/' + Number(hit.date.slice(8, 10)) + ')</span>' : '') +
+        '</span>' +
+      '</button>';
+    }).join('');
+    $('fixedRunNote').textContent = count
+      ? count + '건 · ' + won(sum) + '을(를) 가계부에 넣어요. 다른 항목을 넣으려면 눌러서 체크하세요.'
+      : '넣을 항목을 눌러 체크해 주세요. 이미 입력된 항목은 기본으로 빠져 있어요.';
+    $('fixedRunApply').textContent = count ? won(sum) + ' 입력' : '입력';
+    $('fixedRunApply').disabled = !count;
+    wrap.querySelectorAll('[data-fr]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        var id = this.getAttribute('data-fr');
+        if (fixedRunSel[id]) delete fixedRunSel[id];
+        else fixedRunSel[id] = true;
+        renderFixedRun(fixedRunSel);
+      });
+    });
+  }
+  function openFixedRun() {
+    if (!fixedItems.length) {
+      showToast('설정에서 고정비 항목을 먼저 등록해 주세요');
+      openSettings();
+      return;
+    }
+    var list = entriesOfMonth(viewKey());
+    fixedRunSel = {};
+    fixedItems.forEach(function (it) {
+      if (!fixedItemHit(it, list)) fixedRunSel[it.id] = true;
+    });
+    renderFixedRun(fixedRunSel);
+    openModal('fixedRunModal');
+  }
+  function applyFixedRun() {
+    var added = 0;
+    fixedItems.forEach(function (it) {
+      if (!fixedRunSel[it.id]) return;
+      var rec = normalizeEntry({
+        id: uid(),
+        date: fixedRunDate(it, view.y, view.m),
+        type: 'expense',
+        amount: it.amount,
+        category: it.category,
+        memo: it.name.slice(0, 120),
+        method: it.method,
+        createdAt: Date.now()
+      });
+      if (!rec) return;
+      state.entries.push(rec);
+      syncPushEntry(rec);
+      added++;
+    });
+    if (!added) { closeModal('fixedRunModal'); return; }
+    saveStorage();
+    fixedRunSel = {};
+    closeModal('fixedRunModal');
+    render();
+    showToast('고정비 ' + added + '건을 넣었어요 · 분석에서 바로 보여요');
+  }
+
   function contextAdd() {
     if (ui.tab === 'asset') openModal('assetAddModal');
     else if (ui.tab === 'wedding') openWedding(null, '');
@@ -4715,6 +5170,7 @@
     if ($('oauthClientId')) $('oauthClientId').value = sync.clientId;
     if ($('sheetId')) $('sheetId').value = sync.sheetId;
     renderFixedCatChips();
+    renderFixedItemSettings();
     renderCardGoalSettings();
     openModal('settingsModal');
   }

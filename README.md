@@ -27,7 +27,7 @@
 | Google 시트 ID | `18IFbYx1RO857pWrbkCj55bzyf2vREPz4QOuO_QN84og` |
 | 시트 탭 | `entries` · `budgets` · `assets` · `wedding` (컬럼 규격은 2-1) |
 | 로그인 계정 | `eblovekk@gmail.com` (OAuth 동의 화면 테스트 사용자) |
-| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v17'` |
+| 앱 캐시 버전 | `sw.js`의 `CACHE = 'budget-app-v18'` |
 
 ---
 
@@ -49,6 +49,8 @@
 - **카드별 실적 게이지**: 분석 탭 상단 — 등록한 카드마다 이번 달(조회 중인 달) 사용액·목표 실적·진행률 바·`남은 금액`/`달성 완료` 배지를 보여 줍니다. 목표가 0인 카드는 사용액만(목표 없는 카드는 그 달 사용액이 있을 때만) 표시하고, 사용액은 그 달 `type: expense` 중 `method`가 카드 이름과 같은 건의 합계입니다.
 - **카드 및 목표 실적 설정**: 설정(⚙) → 카드별 실적 설정 — 카드 이름 추가·삭제, 월 목표 실적(원) 변경, 최대 12개(`localStorage` `household_book_cards_v1`). 기본값은 `우리 K-패스` 30만 · `네이버 현대카드` 30만 · `신한 Always` 목표 없음 · `LOCA LIKIT 1.2 카드` 목표 없음. 카드를 삭제해도 기록은 지워지지 않습니다.
 - **고정비·변동비**: 설정(⚙) → 고정비 카테고리 설정에서 고정비로 셀 카테고리를 자유롭게 토글 (localStorage 저장, 기본 `주거/통신`)
+- **월 정기 고정비 항목 (v18)**: 설정(⚙) → **월 정기 고정비**에서 매달 나가는 고정비를 이름·금액·카테고리·결제일·결제수단으로 등록합니다(localStorage 키 `household_book_fixed_items_v1`). 상단에 **월 고정비 합계**가 나오고, 항목을 누르면 수정 시트(삭제 포함)가 열립니다. 기본값은 뱅크샐러드 1년치(2025-11-16~2026-11-16)에서 확인된 4건 — **교보생명 실손보험 35,445원(의료/건강·이체·25일)**, **코웨이 18,900원(주거/통신·네이버 현대카드·20일)**, **LG U+ 통신비 8,800원(주거/통신·우리 K-패스·10일)**, **네이버플러스 멤버십 4,900원(여가/문화·네이버페이 간편결제·9일)** = **합계 68,045원**.
+- **이번 달 고정비 한 번에 입력 (v18)**: 분석 탭 `고정비 · 변동비` 카드 아래에 `등록 고정비 68,045원`과 `이번 달 아직 입력 안 된 고정비 N건 · X원`을 보여 주고, **[이번 달 고정비 입력]** 버튼으로 시트를 엽니다. 이번 달(조회 중인 달) 내역에 이미 들어간 항목은 메모의 검색어(`keys` — 교보·코웨이·U+·네이버플러스 등)로 찾아 **기본 체크를 빼고** `이미 입력됨 · 코웨이 35,000원 (11/4)`처럼 표시하며, 눌러서 체크하면 다시 넣을 수도 있습니다. 입력 날짜는 결제일(그 달 일수를 넘으면 말일, 이번 달이면 오늘까지만), 메모는 항목 이름, 구분은 `지출`로 들어갑니다.
 - **카테고리별 예산**: 분석 탭 예산 카드의 `변경`(빈 상태에선 `예산 설정` 하나만) → 월 전체 + 지출 카테고리별 금액 입력
 - **결혼 지출 합계**: `납부완료` 항목의 결제액만 합산합니다. `예정`·`계약확정` 항목은 `예정` 금액으로 따로 표시합니다.
 - **자산 스냅샷**: 자산 탭 `스냅샷 저장` → 그 달 순자산을 기록, 이전 기록 대비 증감과 추이 자동 계산
@@ -199,11 +201,15 @@
     { "id": "wd_01", "category": "스드메", "item": "스드메 계약금", "budget": 200000, "spent": 200000,
       "dueDate": "2026-08-31", "status": "납부완료", "memo": "", "updatedAt": 1794836460000 }
   ],
-  "fixedCats": ["주거/통신"]
+  "fixedCats": ["주거/통신"],
+  "fixedItems": [
+    { "id": "fx-coway", "name": "코웨이", "amount": 18900, "category": "주거/통신",
+      "method": "네이버 현대카드", "day": 20, "keys": ["코웨이"] }
+  ]
 }
 ```
 
-- 가져오기는 **id가 이미 있으면 건너뛰고 없는 것만 추가**합니다(덮어쓰지 않음). `fixedCats`도 함께 복원합니다.
+- 가져오기는 **id가 이미 있으면 건너뛰고 없는 것만 추가**합니다(덮어쓰지 않음). `fixedCats`도 함께 복원합니다. `fixedItems`(월 정기 고정비)가 들어 있으면 그 목록으로 통째로 바꿉니다.
 - 읽을 때 조건에 맞지 않는 행은 버려집니다: `amount`는 1 이상 정수, `date`는 `YYYY-MM-DD`, `category`가 목록에 없으면 `기타`, 자산 `kind`가 목록에 없으면 `etc`.
 
 ### 2-3. 허용 카테고리 (앱 기준)
@@ -219,6 +225,7 @@
 | `household_book_v1` | 기록·예산·자산·결혼 (`{app, version, savedAt, entries, budgets, assets, wedding}`) |
 | `household_book_ui_v1` | 마지막 탭·가계부 보기 상태 |
 | `household_book_fixed_cats_v1` | 고정비로 셀 카테고리 목록 |
+| `household_book_fixed_items_v1` | 월 정기 고정비 — `[{ "id", "name", "amount", "category", "method", "day", "keys" }]` (없으면 기본 4건 = 68,045원) |
 | `household_book_cards_v1` | 카드별 실적 설정 — `[{ "name": "우리 K-패스", "target": 300000 }]` (없으면 기본 카드 4개) |
 | `household_book_oauth_client_id_v1` | 입력한 Google OAuth 클라이언트 ID |
 | `household_book_sheet_id_v1` | 입력한 스프레드시트 ID |
@@ -232,7 +239,7 @@
 ```
 index.html                  앱 본체 (단일 파일, localStorage + Google OAuth·Sheets API v4, 4탭)
 manifest.webmanifest        PWA 설정 (name/short_name/icons/theme_color)
-sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v17`)
+sw.js                       오프라인 캐시 — **캐시 변수 `CACHE`** (현재 `budget-app-v18`)
 apps-script/Code.gs         (보관·미사용) 구버전 Apps Script 웹 앱 — 참고용 기록
 icon-192.png · icon-512.png · icon-maskable-512.png · apple-touch-icon.png · favicon-32.png   앱 아이콘
 ```
