@@ -11,6 +11,9 @@
 </style>
 </head>
 <body>
-<div class="phone"><iframe id="app" src="./index.html?frame=1" title="bina 360x780"></iframe></div>
+<div class="phone"><iframe id="app" title="bina 360x780"></iframe></div>
+<script>
+document.getElementById('app').src = './index.html?frame=1&t=' + Date.now();
+</script>
 </body>
 </html>
